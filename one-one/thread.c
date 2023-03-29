@@ -1,14 +1,13 @@
 #define _GNU_SOURCE  
 #include"thread.h"
-#include<malloc.h>
 
-#include <unistd.h>
-#include <sched.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <string.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<sched.h>
+#include<stdio.h>
+#include<sys/types.h>
+#include<sys/wait.h>
+#include<string.h>
 
 #ifndef thread_c
 #define thread_c
@@ -40,9 +39,6 @@ int getReadyThread(){
 
 int getThreadIndexByTid(){
     for(int i=0;i<NUMBEROFTHREAD;i++){
-        if(i==0){
-            printf("%d %d\n",threads[i].threadId,(int)gettid());
-        }
         if(threads[i].threadId==(int)gettid()){
             return i;
         }
@@ -70,15 +66,14 @@ int thread_create(mythread_t* thread,int (*function)(void*),void* arg){
     }
     thread->state=RUNNING;
     threads[threadIndex].threadId=
-        clone(function,(void*)(threads[threadIndex].stackPointer+STACKSIZE),0,arg);
+        clone(function,(void*)(threads[threadIndex].stackPointer+STACKSIZE),CLONE_VM,arg);
 
     if(threads[threadIndex].threadId==-1){
         perror("");
         return -1;
     }
 
-    thread=&threads[threadIndex];
-    printf("THREAD_CREATE %d %d\n",thread->threadId,thread->threadIndex);
+    *thread=threads[threadIndex];
     return threads->threadId;
 }
 int thread_join(mythread_t* thread,void** returnValue){
@@ -103,7 +98,6 @@ void thread_exit(void* returnValue){
     }
     int threadIndex=getThreadIndexByTid();
     if(threadIndex==-1){
-        printf("INF\n");
         exit(1);
     }
     threads[threadIndex].returnValue=(void*)message;

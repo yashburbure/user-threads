@@ -3,7 +3,7 @@
 #include<unistd.h>
 
 int function1(void* arg){
-    for(int i=0;i<10;i++){
+    for(int i=0;i<5;i++){
         printf("Hello1\n");
         sleep(1);
     }
@@ -21,14 +21,12 @@ int function2(void* arg){
 }
 
 int main(){
-    printf("hello\n");
     mythread_t thread1,thread2;
     thread_create(&thread1,&function1,0);
-    // thread_create(&thread2,&function2,0);
-    printf("MAIN %d %d\n",thread1.threadId,thread2.threadIndex);
+    thread_create(&thread2,&function2,0);
     void* returnValue;
-    // thread_join(&thread2,&returnValue);
+    thread_join(&thread2,&returnValue);
 
-    printf("Main Thread Exited\n");
+    // printf("Main Thread Exited\n");
     return 0;
 }
