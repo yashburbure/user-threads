@@ -18,7 +18,6 @@ typedef struct threadInfo{
     void* returnValue;
     void* stackPointer;
     int state;
-    int futexIndex;
 }threadInfo;
 
 

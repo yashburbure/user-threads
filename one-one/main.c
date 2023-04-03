@@ -26,7 +26,6 @@ int main(){
     thread_create(&thread2,&function2,0);
     void* returnValue;
     thread_join(&thread1,&returnValue);
-    printf("%s\n",(char*)returnValue);
     printf("Main Thread Exited\n");
     return 0;
 }

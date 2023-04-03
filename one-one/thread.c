@@ -20,8 +20,8 @@
 #define NUMBEROFTHREAD 100
 
 threadInfo threads[100];
-int futexIsUsed[100];
 int threadInitialize=0;
+int futexIndex=0;
 
 void initThreads(){
     for(int i=0;i<NUMBEROFTHREAD;i++){
@@ -29,21 +29,12 @@ void initThreads(){
         threads[i].returnValue=0;
         threads[i].stackPointer=0;
         threads[i].state=READY;
-        threads[i].futexIndex=-1;
     }
 }
 
 int getReadyThread(){
     for(int i=0;i<NUMBEROFTHREAD;i++){
         if(threads[i].state==READY){
-            return i;
-        }
-    }
-    return -1;
-}
-int getFutexIndex(){
-    for(int i=0;i<NUMBEROFTHREAD;i++){
-        if(futexIsUsed[i]==0){
             return i;
         }
     }
@@ -94,26 +85,14 @@ int thread_create(mythread_t* thread,int (*function)(void*),void* arg){
 }
 int thread_join(mythread_t* thread,void** returnValue){
 
-    int futexIndex=getFutexIndex();
-    if(futexIndex==-1){
-        return 1;
-    }
-    threads[thread->threadIndex].futexIndex=futexIndex;
-    futexIsUsed[futexIndex]=1;
-
     while(threads[thread->threadIndex].state!=TERMINATED){
         syscall(SYS_futex,&futexIndex,FUTEX_WAIT,threads[thread->threadIndex].state,NULL,NULL,0);
-        printf("Hello\n");
     }
-    printf("THREAD EXITED\n");
-    threads[thread->threadIndex].futexIndex=-1;
-    futexIsUsed[futexIndex]=0;
 
     *returnValue=threads[thread->threadIndex].returnValue;
 
     free(threads[thread->threadIndex].stackPointer);
     threads[thread->threadIndex].stackPointer=0;
-    threads[thread->threadIndex].futexIndex=-1;
     threads[thread->threadIndex].state=READY;
     threads[thread->threadIndex].returnValue=0;
     threads[thread->threadIndex].threadId=-1;
@@ -132,7 +111,7 @@ void thread_exit(void* returnValue){
     }
     threads[threadIndex].returnValue=(void*)message;
     threads[threadIndex].state=TERMINATED;
-    syscall(SYS_futex,threads[threadIndex].futexIndex,FUTEX_WAKE,threads[threadIndex].state,NULL,NULL,0);
+    syscall(SYS_futex,&futexIndex,FUTEX_WAKE,threads[threadIndex].state,NULL,NULL,0);
     exit(0);
 }
 
