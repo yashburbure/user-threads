@@ -10,11 +10,16 @@
 
 typedef struct mythread_t{
     int threadId;
+    int threadIndex;
+}mythread_t;
+
+typedef struct threadInfo{
+    int threadId;
     void* returnValue;
     void* stackPointer;
     int state;
-    int threadIndex;
-}mythread_t;
+    int futexIndex;
+}threadInfo;
 
 
 
