@@ -2,9 +2,12 @@
 #ifndef THREAD_H
 #define THREAD_H
 
-#define READY 0
-#define RUNNING 1
+
+#define RUNNING 0
+#define WAITING 1
 #define TERMINATED 2
+
+#define STACK_SIZE 2*1024*1024
 
 typedef int mythread_t;
 
@@ -12,6 +15,7 @@ typedef int mythread_t;
 typedef struct thread_info{
     int threadId;
     void* stack;
+    void* returnValue;
     int state;
     ucontext_t context;
     struct thread_info* prev;
