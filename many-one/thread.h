@@ -23,7 +23,7 @@ typedef struct thread_info{
 }thread_info;
 
 
-int thread_create(mythread_t*,int(*function)(void*),void*);
+int thread_create(mythread_t*,void(*function)(void),void*);
 int thread_join(mythread_t*,void**);
 void thread_exit(void*);
 
