@@ -4,12 +4,13 @@
 
 
 #define RUNNING 0
-#define WAITING 1
+#define RUNNABLE 1
 #define TERMINATED 2
 
 #define STACK_SIZE 2*1024*1024
 
 #define TIMER_TIME 10000
+
 
 typedef int mythread_t;
 

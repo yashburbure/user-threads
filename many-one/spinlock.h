@@ -3,12 +3,12 @@
 #define SPINLOCK_H
 
 typedef struct spinlock{
-    isLocked;
+    int isLocked;
 }spinlock;
 
-spinlock* newLock();
-void acquire(spinlock* spl,itimerval* timer);
-void realease(spinlock* spl,itimerval* timer);
+void initspinLock(spinlock* spl);
+int acquire(spinlock* spl);
+int release(spinlock* spl);
 
 
 

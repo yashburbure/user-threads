@@ -1,0 +1,58 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
+!_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
+!_TAG_PROC_CWD	/home/yash_burbure/6thSem/OS/project/many-one/	//
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	5.9.0	//
+RUNNABLE	thread.h	/^#define RUNNABLE /;"	d
+RUNNING	thread.h	/^#define RUNNING /;"	d
+SPINLOCK_C	spinlock.c	/^#define SPINLOCK_C$/;"	d	file:
+SPINLOCK_H	spinlock.h	/^#define SPINLOCK_H$/;"	d
+STACK_SIZE	thread.h	/^#define STACK_SIZE /;"	d
+TERMINATED	thread.h	/^#define TERMINATED /;"	d
+THREAD_C	thread.c	/^#define THREAD_C$/;"	d	file:
+THREAD_H	thread.h	/^#define THREAD_H$/;"	d
+TIMER_C	timer.c	/^#define TIMER_C$/;"	d	file:
+TIMER_H	timer.h	/^#define TIMER_H$/;"	d
+TIMER_TIME	thread.h	/^#define TIMER_TIME /;"	d
+_GNU_SOURCE	thread.c	/^#define _GNU_SOURCE$/;"	d	file:
+acquire	spinlock.c	/^int acquire(spinlock* spl){$/;"	f	typeref:typename:int
+clearTimer	timer.c	/^int clearTimer(){$/;"	f	typeref:typename:int
+context	thread.h	/^    ucontext_t context;$/;"	m	struct:thread_info	typeref:typename:ucontext_t
+function	main.c	/^void function(void){$/;"	f	typeref:typename:void
+getThreadId	thread.c	/^int getThreadId(){$/;"	f	typeref:typename:int
+headThread	thread.c	/^thread_info* headThread;$/;"	v	typeref:typename:thread_info *
+initDone	thread.c	/^int initDone=0;$/;"	v	typeref:typename:int
+initThreadDS	thread.c	/^int initThreadDS(){$/;"	f	typeref:typename:int
+initspinLock	spinlock.c	/^void initspinLock(spinlock* spl){$/;"	f	typeref:typename:void
+isLocked	spinlock.h	/^    int isLocked;$/;"	m	struct:spinlock	typeref:typename:int
+itimerval	timer.h	/^typedef struct itimerval itimerval;$/;"	t	typeref:struct:itimerval
+linkedListLock	thread.c	/^spinlock linkedListLock;$/;"	v	typeref:typename:spinlock
+main	main.c	/^int main(){$/;"	f	typeref:typename:int
+mainThreadId	thread.c	/^int mainThreadId;$/;"	v	typeref:typename:int
+mythread_t	thread.h	/^typedef int mythread_t;$/;"	t	typeref:typename:int
+newThread	thread.c	/^thread_info* newThread(){$/;"	f	typeref:typename:thread_info *
+next	thread.h	/^    struct thread_info* next;$/;"	m	struct:thread_info	typeref:struct:thread_info *
+prev	thread.h	/^    struct thread_info* prev;$/;"	m	struct:thread_info	typeref:struct:thread_info *
+realease	spinlock.c	/^int realease(spinlock* spl){$/;"	f	typeref:typename:int
+returnValue	thread.h	/^    void* returnValue;$/;"	m	struct:thread_info	typeref:typename:void *
+scheduler	thread.c	/^int scheduler(void* arg){$/;"	f	typeref:typename:int
+schedulerContext	thread.c	/^ucontext_t schedulerContext;$/;"	v	typeref:typename:ucontext_t
+setTimer	timer.c	/^int setTimer(int second,int nanosecond){$/;"	f	typeref:typename:int
+signalHandler	thread.c	/^void signalHandler(int signal){$/;"	f	typeref:typename:void
+spinlock	spinlock.h	/^typedef struct spinlock{$/;"	s
+spinlock	spinlock.h	/^}spinlock;$/;"	t	typeref:struct:spinlock
+stack	thread.h	/^    void* stack;$/;"	m	struct:thread_info	typeref:typename:void *
+state	thread.h	/^    int state;$/;"	m	struct:thread_info	typeref:typename:int
+threadId	thread.c	/^int threadId[1000];$/;"	v	typeref:typename:int[1000]
+threadId	thread.h	/^    int threadId;$/;"	m	struct:thread_info	typeref:typename:int
+thread_create	thread.c	/^int thread_create(mythread_t*,void(*function)(void),void*){$/;"	f	typeref:typename:int
+thread_exit	thread.c	/^void thread_exit(void*){$/;"	f	typeref:typename:void
+thread_info	thread.h	/^typedef struct thread_info{$/;"	s
+thread_info	thread.h	/^}thread_info;$/;"	t	typeref:struct:thread_info
+thread_join	thread.c	/^int thread_join(mythread_t*,void**){$/;"	f	typeref:typename:int

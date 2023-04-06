@@ -1,5 +1,6 @@
 #include"timer.h"
 #include<sys/time.h>
+
 #ifndef TIMER_C
 #define TIMER_C
 
@@ -18,7 +19,7 @@ int setTimer(int second,int nanosecond){
     return setitimer(ITIMER_REAL,&timer,0); 
 }
 
-int resetTimer(){
+int clearTimer(){
     itimerval timer;
 
     timer.it_value.tv_sec=0;

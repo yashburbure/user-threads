@@ -6,7 +6,7 @@ typedef struct itimerval itimerval;
 
 
 int setTimer(int second,int microsecond);
-int resetTimer();
+int clearTimer();
 
 
 #endif
