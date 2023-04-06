@@ -20,7 +20,7 @@ int acquire(spinlock* spl){
 }
 int release(spinlock* spl){
     spl->isLocked=0;
-    return setTimer(0,10000);
+    return setTimer(0,1000);
 }
 
 

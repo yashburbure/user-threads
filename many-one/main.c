@@ -8,6 +8,7 @@
 void function1(void){
     for(int i=0;i<10;i++){
         printf("hello1\n");
+        sleep(1);
     }
     thread_exit(0);
 }
@@ -16,7 +17,9 @@ void function1(void){
 void function2(void){
     for(int i=0;i<10;i++){
         printf("hello2\n");
+        sleep(1);
     }
+    thread_exit(0);
 }
 
 int main(){

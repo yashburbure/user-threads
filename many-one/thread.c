@@ -50,6 +50,8 @@ thread_info* newThread(){
 
     nn->threadId=getThreadId();
 
+    threadId[nn->threadId]=1;
+
     if(nn->threadId==-1){
         fprintf(stderr,"All thread are being used\n");
         free(nn);
@@ -72,8 +74,9 @@ thread_info* newThread(){
     nn->next=nn->prev=nn->returnValue=nn->stack=NULL;
 }
 void signalHandler(int signal){
-    printf("Signal Handled\n");
-    swapcontext(&(headThread->context),&(schedulerContext));
+    thread_info* currThread=headThread;
+    headThread=headThread->next;
+    swapcontext(&(currThread->context),&(schedulerContext));
 }
 
 
@@ -83,6 +86,8 @@ int scheduler(void* arg){
     printf("Scheduler started\n");
 
     while(kill(mainThreadId,0)==0 || headThread){
+        getcontext(&schedulerContext);
+        clearTimer();
         while(linkedListLock.isLocked)
             ;
         acquire(&linkedListLock);
@@ -95,14 +100,11 @@ int scheduler(void* arg){
             }while(currThread!=headThread);
         }
         if(currThread->state==RUNNABLE){
-            printf("Found thread\n");
             headThread=currThread;
-            headThread->state=RUNNING;
         }
         release(&linkedListLock);
         setTimer(0,TIMER_TIME);
         swapcontext(&schedulerContext,&(headThread->context));
-        clearTimer();
     }
     printf("Scheduler Ended\n");
     return 0;
@@ -158,6 +160,11 @@ int thread_create(mythread_t*,void(*function)(void),void*){
         headThread->prev=nn;
     }
 
+    thread_info* currThread=headThread;
+
+    do{
+        currThread=currThread->next;
+    }while(currThread!=headThread);
     release(&linkedListLock);
 
 
