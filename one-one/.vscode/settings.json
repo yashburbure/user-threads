@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "functional": "cpp",
-        "futex.h": "c",
-        "syscall.h": "c"
-    }
-}
