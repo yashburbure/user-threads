@@ -12,11 +12,9 @@ void function(void){
 int main(){
     mythread_t thread;
 
-    
     if(thread_create(&thread,&function,0)==1){
         return 1;
     }
-    
     printf("Exited\n");
     return 0;
 }

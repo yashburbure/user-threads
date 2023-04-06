@@ -2,6 +2,9 @@
     "files.associations": {
         "unistd.h": "c",
         "thread.h": "c",
-        "signal.h": "c"
+        "signal.h": "c",
+        "time.h": "c",
+        "spinlock.h": "c",
+        "timer.h": "c"
     }
 }

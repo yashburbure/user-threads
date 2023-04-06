@@ -4,7 +4,9 @@
 #include<malloc.h>
 #include<sched.h>
 #include<signal.h>
+#include<sys/time.h>
 #include"thread.h"
+#include"timer.h"
 
 #ifndef THREAD_C
 #define THREAD_C
@@ -14,7 +16,9 @@ thread_info* headThread;
 int mainThreadId;
 int threadId[1000];
 
-ucontext_t mainContext;
+
+
+ucontext_t schedulerContext;
 
 
 int getThreadId(){
@@ -25,6 +29,8 @@ int getThreadId(){
     }
     return -1;
 }
+
+
 
 
 thread_info* newThread(){
@@ -58,28 +64,39 @@ thread_info* newThread(){
 
     nn->context.uc_stack.ss_size=STACK_SIZE;
     nn->context.uc_stack.ss_sp=nn->stack;
-    nn->context.uc_link=&mainContext;
+    nn->context.uc_link=&schedulerContext;
 
     nn->state=WAITING;
     nn->next=nn->prev=nn->returnValue=nn->stack=NULL;
 }
 void signalHandler(int signal){
     printf("signal handled Thread\n");
+
 }
 
 
 int scheduler(void* arg){
-    mainThreadId=gettid();
+    getcontext(&schedulerContext);
+    
+    int ct=0;
+    printf("Scheduler code started\n");
     while(kill(mainThreadId,0)==0 || headThread){
-        printf("hello\n");
+        if(headThread){
+            if(swapcontext(&schedulerContext,&(headThread->context))){
+                perror("Error : ");
+                return 0;
+            }
+        }
     }
+    printf("Ended\n");
+    printf("Scheduler code ended\n");
     return 0;
 }
 
 
 
 int initThreadDS(){
-    getcontext(&mainContext);
+    mainThreadId=gettid();
     signal(SIGALRM,signalHandler);
     headThread=NULL;
     void* stack=malloc(STACK_SIZE);
