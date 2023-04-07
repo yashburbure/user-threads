@@ -7,8 +7,8 @@ typedef struct spinlock{
 }spinlock;
 
 void initspinLock(spinlock* spl);
-int acquire(spinlock* spl);
-int release(spinlock* spl);
+void acquire(spinlock* spl);
+void release(spinlock* spl);
 
 
 

@@ -3,22 +3,28 @@
 #include<unistd.h>
 #include<sys/time.h>
 #include"thread.h"
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+#include<string.h>
 
 
 void function1(void){
-    for(int i=0;i<10;i++){
-        printf("hello1\n");
-        sleep(1);
+    int ct=0;
+    for(int i=0;i<1000000;i++){
+        ct++;
     }
+    printf("%d\n",ct);
     thread_exit(0);
 }
 
 
 void function2(void){
-    for(int i=0;i<10;i++){
-        printf("hello2\n");
-        sleep(1);
+    int ct=0;
+    for(int i=0;i<1000000;i++){
+        ct++;
     }
+    printf("%d\n",ct);
     thread_exit(0);
 }
 

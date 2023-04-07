@@ -8,7 +8,7 @@
 
 #define STACK_SIZE 2*1024*1024
 
-#define TIMER_TIME 1000
+#define TIMER_TIME 10
 
 
 typedef int mythread_t;

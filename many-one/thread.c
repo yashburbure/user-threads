@@ -74,6 +74,7 @@ thread_info* newThread(){
     nn->next=nn->prev=nn->returnValue=nn->stack=NULL;
 }
 void signalHandler(int signal){
+    printf("Signal Handled\n");
     thread_info* currThread=headThread;
     headThread=headThread->next;
     swapcontext(&(currThread->context),&(schedulerContext));
@@ -82,29 +83,66 @@ void signalHandler(int signal){
 
 int scheduler(void* arg){
     signal(SIGALRM,signalHandler);
-    getcontext(&schedulerContext);
     printf("Scheduler started\n");
-
-    while(kill(mainThreadId,0)==0 || headThread){
-        getcontext(&schedulerContext);
-        clearTimer();
-        while(linkedListLock.isLocked)
-            ;
-        acquire(&linkedListLock);
+    int mainThreadKilled=(kill(mainThreadId,0)==0);
+    while(!mainThreadId || headThread){
         thread_info* currThread=headThread;
-        if(currThread){
+        int runnableThread=0;
+        if(headThread){
+            acquire(&linkedListLock);
             do{
                 if(currThread->state==RUNNABLE){
-                    break;
+                    runnableThread++;
                 }
+                currThread=currThread->next;
             }while(currThread!=headThread);
+
+            release(&linkedListLock);
         }
-        if(currThread->state==RUNNABLE){
-            headThread=currThread;
+        if(mainThreadKilled && runnableThread==0){
+            break;
         }
-        release(&linkedListLock);
-        setTimer(0,TIMER_TIME);
-        swapcontext(&schedulerContext,&(headThread->context));
+        else if(mainThreadKilled && runnableThread){
+
+        }
+        else{
+            mainThreadKilled=(kill(mainThreadId,0)==0);
+        }
+
+        getcontext(&schedulerContext);
+        if(clearTimer(0,TIMER_TIME)==-1){
+            perror("Error : ");
+        }
+
+        if(headThread){
+            while(linkedListLock.isLocked)
+            ;
+        
+            acquire(&linkedListLock);
+
+            currThread=headThread;
+
+
+
+            thread_info* currThread=headThread;
+            if(currThread){
+                do{
+                    if(currThread->state==RUNNABLE){
+                        break;
+                    }
+                        currThread=currThread->next;
+                }while(currThread!=headThread);
+            }
+            if(currThread->state==RUNNABLE){
+                headThread=currThread;
+            }
+            release(&linkedListLock);
+            if(setTimer(0,TIMER_TIME)==-1){
+                perror("Error : ");
+            }
+            swapcontext(&schedulerContext,&(headThread->context)); 
+
+        }
     }
     printf("Scheduler Ended\n");
     return 0;
@@ -114,7 +152,7 @@ int scheduler(void* arg){
 
 int initThreadDS(){
     initspinLock(&linkedListLock);
-    mainThreadId=gettid();
+    mainThreadId=getpid();
     headThread=NULL;
     void* stack=malloc(STACK_SIZE);
     if(!stack){
@@ -182,7 +220,14 @@ int thread_join(mythread_t*,void**){
 void thread_exit(void*){
     clearTimer();
     headThread->state=TERMINATED;
-    setTimer(0,TIMER_TIME);
+    // printf("%d\n",headThread->threadId);
+    thread_info* currThread=headThread;
+
+    do{
+        // printf("STATE %d\n",currThread->state);
+        currThread=currThread->next;
+    }while(currThread!=headThread);
+
     swapcontext(&(headThread->context),&(schedulerContext));
 }
 

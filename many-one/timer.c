@@ -16,7 +16,7 @@ int setTimer(int second,int nanosecond){
     timer.it_interval.tv_usec=0;
 
 
-    return setitimer(ITIMER_REAL,&timer,0); 
+    return setitimer(ITIMER_VIRTUAL,&timer,0); 
 }
 
 int clearTimer(){
@@ -28,7 +28,7 @@ int clearTimer(){
     timer.it_interval.tv_sec=0;
     timer.it_interval.tv_usec=0;
 
-    return setitimer(ITIMER_REAL,&timer,0);
+    return setitimer(ITIMER_VIRTUAL,&timer,0);
 }
 
 
