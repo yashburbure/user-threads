@@ -1,10 +1,15 @@
 #define _GNU_SOURCE
 #include<unistd.h>
 #include<sys/types.h>
+#include<sys/syscall.h>
 #include<malloc.h>
 #include<sched.h>
 #include<signal.h>
+#include<string.h>
+#include<linux/futex.h>
+#include<stdint.h>
 #include<sys/time.h>
+#include<sys/wait.h>
 #include"thread.h"
 #include"spinlock.h"
 #include"timer.h"
@@ -73,6 +78,25 @@ thread_info* newThread(){
     nn->state=RUNNABLE;
     nn->next=nn->prev=nn->returnValue=nn->stack=NULL;
 }
+
+void freeThreadDS(){
+    if(!headThread){
+        return;
+    }
+    thread_info* currThread=headThread;
+    thread_info* nextThread;
+    int ct=0;
+    do{
+        nextThread=currThread->next;
+        free(currThread->stack);
+        free(currThread->returnValue);
+        free(currThread);
+        currThread=nextThread;
+    }while(currThread!=headThread);
+
+}
+
+
 void signalHandler(int signal){
     printf("Signal Handled\n");
     thread_info* currThread=headThread;
@@ -102,10 +126,7 @@ int scheduler(void* arg){
         if(mainThreadKilled && runnableThread==0){
             break;
         }
-        else if(mainThreadKilled && runnableThread){
-
-        }
-        else{
+        else if(!mainThreadKilled){
             mainThreadKilled=(kill(mainThreadId,0)==0);
         }
 
@@ -113,6 +134,12 @@ int scheduler(void* arg){
         if(clearTimer(0,TIMER_TIME)==-1){
             perror("Error : ");
         }
+        
+        currThread=headThread;
+        do{
+            // printf("THREAD ID : %d :: STATE: %d \n",currThread->threadId,currThread->state);
+            currThread=currThread->next;
+        }while(currThread!=headThread);
 
         if(headThread){
             while(linkedListLock.isLocked)
@@ -123,14 +150,14 @@ int scheduler(void* arg){
             currThread=headThread;
 
 
-
+            
             thread_info* currThread=headThread;
             if(currThread){
                 do{
                     if(currThread->state==RUNNABLE){
                         break;
                     }
-                        currThread=currThread->next;
+                    currThread=currThread->next;
                 }while(currThread!=headThread);
             }
             if(currThread->state==RUNNABLE){
@@ -141,10 +168,10 @@ int scheduler(void* arg){
                 perror("Error : ");
             }
             swapcontext(&schedulerContext,&(headThread->context)); 
-
         }
     }
-    printf("Scheduler Ended\n");
+    freeThreadDS();
+    printf("Scheduler ended\n");
     return 0;
 }
 
@@ -197,37 +224,67 @@ int thread_create(mythread_t*,void(*function)(void),void*){
         headThread->prev->next=nn;
         headThread->prev=nn;
     }
-
     thread_info* currThread=headThread;
 
-    do{
-        currThread=currThread->next;
-    }while(currThread!=headThread);
     release(&linkedListLock);
 
 
     return 0;
 }
-int thread_join(mythread_t*,void**){
+int thread_join(mythread_t* thread,void** returnValue){
+    
+
     while(linkedListLock.isLocked)
         ;
-    // acquire(&linkedListLock);
-
-
-
-    // release(&linkedListLock);
-}
-void thread_exit(void*){
-    clearTimer();
-    headThread->state=TERMINATED;
-    // printf("%d\n",headThread->threadId);
+    thread_info* foundThread=NULL;
     thread_info* currThread=headThread;
+    while(linkedListLock.isLocked)
+        ;
+    acquire(&linkedListLock);
 
     do{
-        // printf("STATE %d\n",currThread->state);
+        if(currThread->threadId==*thread){
+            foundThread=currThread;
+            break;
+        }
         currThread=currThread->next;
     }while(currThread!=headThread);
 
+    release(&linkedListLock);
+
+    if(!foundThread){
+        printf("No such Thread\n");
+        return 1;
+    }
+    while(foundThread->state!=TERMINATED){
+        syscall(SYS_futex,&(foundThread->threadId),FUTEX_WAIT,foundThread->state,NULL,NULL,0);
+    }
+    while(linkedListLock.isLocked)
+        ;
+
+    if(currThread->next==currThread){
+        headThread=NULL;
+
+    }
+    else{
+        currThread->prev->next=currThread->next;
+        currThread->next->prev=currThread->prev;
+    }
+    free(currThread->stack);
+    free(currThread); 
+
+    *returnValue=foundThread->returnValue;
+    return 0;
+}
+void thread_exit(void* returnValue){
+    clearTimer();
+    headThread->state=TERMINATED;
+    if(returnValue){
+         char* message=(char*)malloc(sizeof(returnValue));
+        strcpy(message,(char*)returnValue);
+        headThread->returnValue=message;
+    }
+    syscall(SYS_futex,&(headThread->threadId),FUTEX_WAKE,headThread->state,NULL,NULL,0);
     swapcontext(&(headThread->context),&(schedulerContext));
 }
 
