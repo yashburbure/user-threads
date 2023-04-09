@@ -11,7 +11,6 @@
 #include<sys/time.h>
 #include<sys/wait.h>
 #include"thread.h"
-#include"spinlock.h"
 #include"timer.h"
 
 
@@ -22,7 +21,7 @@ int initDone=0;
 thread_info* headThread;
 int mainThreadId;
 int threadId[1000];
-spinlock linkedListLock;
+int linkedListLock;
 
 
 
@@ -77,6 +76,10 @@ thread_info* newThread(){
 
     nn->state=RUNNABLE;
     nn->next=nn->prev=nn->returnValue=nn->stack=NULL;
+
+    nn->spinlock=nn->sleeplock=0;
+
+    return nn;
 }
 
 void freeThreadDS(){
@@ -110,10 +113,15 @@ int scheduler(void* arg){
     printf("Scheduler started\n");
     int mainThreadKilled=(kill(mainThreadId,0)==0);
     while(!mainThreadId || headThread){
-        thread_info* currThread=headThread;
         int runnableThread=0;
         if(headThread){
-            acquire(&linkedListLock);
+
+            while(linkedListLock)
+                ;
+
+            linkedListLock=1;
+
+            thread_info* currThread=headThread;
             do{
                 if(currThread->state==RUNNABLE){
                     runnableThread++;
@@ -121,7 +129,8 @@ int scheduler(void* arg){
                 currThread=currThread->next;
             }while(currThread!=headThread);
 
-            release(&linkedListLock);
+            linkedListLock=0;
+
         }
         if(mainThreadKilled && runnableThread==0){
             break;
@@ -129,27 +138,13 @@ int scheduler(void* arg){
         else if(!mainThreadKilled){
             mainThreadKilled=(kill(mainThreadId,0)==0);
         }
-
-        getcontext(&schedulerContext);
-        if(clearTimer(0,TIMER_TIME)==-1){
-            perror("Error : ");
-        }
         
-        currThread=headThread;
-        do{
-            // printf("THREAD ID : %d :: STATE: %d \n",currThread->threadId,currThread->state);
-            currThread=currThread->next;
-        }while(currThread!=headThread);
 
         if(headThread){
-            while(linkedListLock.isLocked)
-            ;
-        
-            acquire(&linkedListLock);
-
-            currThread=headThread;
-
-
+            while(linkedListLock)
+                ;
+            
+            linkedListLock=1;
             
             thread_info* currThread=headThread;
             if(currThread){
@@ -163,11 +158,13 @@ int scheduler(void* arg){
             if(currThread->state==RUNNABLE){
                 headThread=currThread;
             }
-            release(&linkedListLock);
+            linkedListLock=0;
+
             if(setTimer(0,TIMER_TIME)==-1){
                 perror("Error : ");
             }
             swapcontext(&schedulerContext,&(headThread->context)); 
+            clearTimer();
         }
     }
     freeThreadDS();
@@ -178,8 +175,8 @@ int scheduler(void* arg){
 
 
 int initThreadDS(){
-    initspinLock(&linkedListLock);
-    mainThreadId=getpid();
+    linkedListLock=0;
+    mainThreadId=gettid();
     headThread=NULL;
     void* stack=malloc(STACK_SIZE);
     if(!stack){
@@ -209,10 +206,10 @@ int thread_create(mythread_t*,void(*function)(void),void*){
     }
     makecontext(&nn->context,function,0);
 
-    while(linkedListLock.isLocked)
+    while(linkedListLock)
         ;
 
-    acquire(&linkedListLock);
+    linkedListLock=1;
 
     if(!headThread){
         nn->prev=nn->next=nn;
@@ -226,7 +223,7 @@ int thread_create(mythread_t*,void(*function)(void),void*){
     }
     thread_info* currThread=headThread;
 
-    release(&linkedListLock);
+    linkedListLock=0;
 
 
     return 0;
@@ -234,13 +231,13 @@ int thread_create(mythread_t*,void(*function)(void),void*){
 int thread_join(mythread_t* thread,void** returnValue){
     
 
-    while(linkedListLock.isLocked)
+    while(linkedListLock)
         ;
+
+    linkedListLock=1;
+
     thread_info* foundThread=NULL;
     thread_info* currThread=headThread;
-    while(linkedListLock.isLocked)
-        ;
-    acquire(&linkedListLock);
 
     do{
         if(currThread->threadId==*thread){
@@ -250,7 +247,7 @@ int thread_join(mythread_t* thread,void** returnValue){
         currThread=currThread->next;
     }while(currThread!=headThread);
 
-    release(&linkedListLock);
+    linkedListLock=0;
 
     if(!foundThread){
         printf("No such Thread\n");
@@ -259,8 +256,10 @@ int thread_join(mythread_t* thread,void** returnValue){
     while(foundThread->state!=TERMINATED){
         syscall(SYS_futex,&(foundThread->threadId),FUTEX_WAIT,foundThread->state,NULL,NULL,0);
     }
-    while(linkedListLock.isLocked)
+
+    while(linkedListLock)
         ;
+    linkedListLock=1;
 
     if(currThread->next==currThread){
         headThread=NULL;
@@ -274,8 +273,11 @@ int thread_join(mythread_t* thread,void** returnValue){
     free(currThread); 
 
     *returnValue=foundThread->returnValue;
+
+    linkedListLock=0;
     return 0;
 }
+
 void thread_exit(void* returnValue){
     clearTimer();
     headThread->state=TERMINATED;
@@ -287,6 +289,49 @@ void thread_exit(void* returnValue){
     syscall(SYS_futex,&(headThread->threadId),FUTEX_WAKE,headThread->state,NULL,NULL,0);
     swapcontext(&(headThread->context),&(schedulerContext));
 }
+
+int thread_lock(mythread_t* thread){
+    while(linkedListLock)
+        ;
+    linkedListLock=1;
+
+    thread_info* currThread=headThread;
+    thread_info* foundThread=NULL;
+
+    do{
+        if(currThread->threadId==*thread){
+            foundThread=currThread;
+            break;
+        }
+    }while(currThread!=headThread);
+
+    if(!foundThread){
+        return 1;
+    }
+
+    foundThread->spinlock=1;
+
+    linkedListLock=0;
+
+    
+
+}
+
+int thread_unlock(mythread_t*){
+
+
+}
+
+int thread_mutex_lock(mythread_t*){
+
+
+}
+int thread_mutex_unlock(mythread_t*){
+    
+}
+
+
+
 
 
 #endif
