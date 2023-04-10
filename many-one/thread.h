@@ -12,7 +12,15 @@
 
 
 typedef int mythread_t;
-typedef void pythread_object;
+
+typedef int mythread_mutex_t;
+
+typedef struct mythread_mutex_info{
+    int mutexId;
+    int isLocked;
+    struct mythread_mutex_info* next;
+}mythread_mutex_info;
+
 
 typedef struct thread_info{
     int threadId;
@@ -22,20 +30,18 @@ typedef struct thread_info{
     ucontext_t context;
     struct thread_info* prev;
     struct thread_info* next;
-    int spinlock;
-    int sleeplock;
-
+    int lock;
 }thread_info;
 
 
 int thread_create(mythread_t*,void(*function)(void),void*);
 int thread_join(mythread_t*,void**);
 void thread_exit(void*);
-int thread_lock(mythread_t*);
-int thread_unlock(mythread_t*);
-int thread_mutex_lock(mythread_t*);
-int thread_mutex_unlock(mythread_t*);
-
+void thread_mutex_init(mythread_mutex_t*);
+int thread_lock(mythread_mutex_t*);
+int thread_unlock(mythread_mutex_t*);
+int thread_mutex_lock(mythread_mutex_t*);
+int thread_mutex_unlock(mythread_mutex_t*);
 
 
 

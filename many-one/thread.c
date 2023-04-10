@@ -22,7 +22,8 @@ thread_info* headThread;
 int mainThreadId;
 int threadId[1000];
 int linkedListLock;
-
+int mutexId;
+mythread_mutex_info* headMutex,*backMutex;
 
 
 ucontext_t schedulerContext;
@@ -77,7 +78,7 @@ thread_info* newThread(){
     nn->state=RUNNABLE;
     nn->next=nn->prev=nn->returnValue=nn->stack=NULL;
 
-    nn->spinlock=nn->sleeplock=0;
+    nn->lock=0;
 
     return nn;
 }
@@ -176,8 +177,11 @@ int scheduler(void* arg){
 
 int initThreadDS(){
     linkedListLock=0;
+    mutexId=0;
     mainThreadId=gettid();
     headThread=NULL;
+    headMutex=NULL;
+    backMutex=NULL;
     void* stack=malloc(STACK_SIZE);
     if(!stack){
         perror("Error : ");
@@ -289,45 +293,97 @@ void thread_exit(void* returnValue){
     syscall(SYS_futex,&(headThread->threadId),FUTEX_WAKE,headThread->state,NULL,NULL,0);
     swapcontext(&(headThread->context),&(schedulerContext));
 }
+void thread_mutex_init(mythread_mutex_t* mutex){
+    *mutex=mutexId++;
+    mythread_mutex_info* nn=(mythread_mutex_info*)malloc(sizeof(mythread_mutex_info));
+    nn->mutexId=*mutex;
+    nn->next=NULL;
+    nn->isLocked=0;
+    if(!headMutex){
+        headMutex=nn;
+        backMutex=nn;
+    }
+    else{
+        backMutex->next=nn;
+        backMutex=nn;
+    }
+}
 
-int thread_lock(mythread_t* thread){
-    while(linkedListLock)
-        ;
-    linkedListLock=1;
 
-    thread_info* currThread=headThread;
-    thread_info* foundThread=NULL;
-
-    do{
-        if(currThread->threadId==*thread){
-            foundThread=currThread;
+int thread_lock(mythread_mutex_t* mutex){
+    clearTimer();
+    mythread_mutex_info* currMutex=headMutex;
+    while(currMutex){
+        if(currMutex->mutexId==*mutex){
             break;
         }
-    }while(currThread!=headThread);
-
-    if(!foundThread){
-        return 1;
+    }
+    if(!currMutex){
+        return -1;
     }
 
-    foundThread->spinlock=1;
-
-    linkedListLock=0;
-
-    
-
+    //spinning for lock
+    while(currMutex->isLocked)
+        ;
+    currMutex->isLocked=1;
+    headThread->lock=1;
+    return 0;
 }
 
-int thread_unlock(mythread_t*){
-
-
+int thread_unlock(mythread_mutex_t* mutex){
+    mythread_mutex_info* currMutex=headMutex;
+    while(currMutex){
+        if(currMutex->mutexId==*mutex){
+            break;
+        }
+    }
+    if(!currMutex){
+        return -1;
+    }
+    currMutex->isLocked=0;
+    headThread->lock=0;
+    setTimer(0,TIMER_TIME);
+    return 0;
 }
 
-int thread_mutex_lock(mythread_t*){
+int thread_mutex_lock(mythread_mutex_t* mutex){
+    clearTimer();
+    mythread_mutex_info* currMutex=headMutex;
+    while(currMutex){
+        if(currMutex->mutexId==*mutex){
+            break;
+        }
+    }
+    if(!currMutex){
+        return -1;
+    }
 
+    //sleeping for lock
+    while(currMutex->isLocked){
+        syscall(SYS_futex,&(currMutex->mutexId),FUTEX_WAIT,currMutex->isLocked,NULL,NULL,0);
+    }
+    currMutex->isLocked=1;
+    headThread->lock=1;
+    return 0;
 
 }
-int thread_mutex_unlock(mythread_t*){
-    
+int thread_mutex_unlock(mythread_mutex_t* mutex){
+     mythread_mutex_info* currMutex=headMutex;
+    while(currMutex){
+        if(currMutex->mutexId==*mutex){
+            break;
+        }
+    }
+    if(!currMutex){
+        return -1;
+    }
+    currMutex->isLocked=0;
+
+    syscall(SYS_futex,&(currMutex->mutexId),FUTEX_WAKE,currMutex->isLocked,NULL,NULL,0);
+
+    headThread->lock=0;
+    setTimer(0,TIMER_TIME);
+    return 0;
 }
 
 
