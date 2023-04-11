@@ -78,7 +78,6 @@ thread_info* newThread(){
     nn->state=RUNNABLE;
     nn->next=nn->prev=nn->returnValue=nn->stack=NULL;
 
-    nn->lock=0;
 
     return nn;
 }
@@ -102,7 +101,8 @@ void freeThreadDS(){
 
 
 void signalHandler(int signal){
-    printf("Signal Handled %d\n",headThread->threadId);
+    // printf("Signal Handled\n");
+    // printf("Signal Handled %d\n",headThread->threadId);
     thread_info* currThread=headThread;
     headThread=headThread->next;
     swapcontext(&(currThread->context),&(schedulerContext));
@@ -113,7 +113,7 @@ int scheduler(void* arg){
     signal(SIGALRM,signalHandler);
     printf("Scheduler started\n");
     int mainThreadKilled=(kill(mainThreadId,0)==0);
-    while(!mainThreadId || headThread){
+    while(!mainThreadKilled || headThread){
         int runnableThread=0;
         if(headThread){
 
@@ -169,6 +169,7 @@ int scheduler(void* arg){
             clearTimer();
         }
     }
+    printf("Scheduler ended\n");
     freeThreadDS();
     printf("Scheduler ended\n");
     return 0;
@@ -231,11 +232,11 @@ int thread_create(mythread_t* thread,void(*function)(void),void*){
     return 0;
 }   
 int thread_join(mythread_t* thread,void** returnValue){
-    thread_info* temp=headThread;
-    do{
-        printf("%d\n",temp->threadId);
-        temp=temp->next;
-    }while(temp!=headThread);
+    // thread_info* temp=headThread;
+    // do{
+    //     printf("%d\n",temp->threadId);
+    //     temp=temp->next;
+    // }while(temp!=headThread);
 
 
     printf("THREADJOIN %d\n",*thread);
@@ -251,7 +252,6 @@ int thread_join(mythread_t* thread,void** returnValue){
     //ERROR HEADTHREAD IS NOT CHANGING
 
     do{
-        printf("%d %d\n",currThread->threadId,*thread);
         if(currThread->threadId==*thread){
             foundThread=currThread;
             break;
@@ -275,20 +275,10 @@ int thread_join(mythread_t* thread,void** returnValue){
         ;
     linkedListLock=1;
 
-    if(currThread->next==currThread){
-        headThread=NULL;
-    }
-    else{
-        currThread->prev->next=currThread->next;
-        currThread->next->prev=currThread->prev;
-    }
-    free(currThread->stack);
-    free(currThread); 
 
     *returnValue=foundThread->returnValue;
 
     linkedListLock=0;
-    printf("hello yash\n");
     return 0;
 }
 
@@ -296,7 +286,7 @@ void thread_exit(void* returnValue){
     clearTimer();
     headThread->state=TERMINATED;
     if(returnValue){
-         char* message=(char*)malloc(sizeof(returnValue));
+        char* message=(char*)malloc(sizeof(returnValue));
         strcpy(message,(char*)returnValue);
         headThread->returnValue=message;
     }
@@ -319,14 +309,38 @@ void thread_mutex_init(mythread_mutex_t* mutex){
     }
 }
 
+int thread_mutex_destroy(mythread_mutex_t* mutex){
+    mythread_mutex_info* currMutex=headMutex;
+    mythread_mutex_info* prevMutex=NULL;
+    while(currMutex){
+        if(currMutex->mutexId==*mutex){
+            break;
+        }
+        prevMutex=currMutex;
+        currMutex=currMutex->next;
+    }
+    if(!currMutex){
+        return -1;
+    }
+    if(currMutex==headMutex){
+        headMutex=currMutex->next;
+    }
+    else{
+        prevMutex->next=currMutex->next;
+    }
+    currMutex->next=NULL;
+    free(currMutex);
+    return 0;
+}
+
 
 int thread_lock(mythread_mutex_t* mutex){
-    clearTimer();
     mythread_mutex_info* currMutex=headMutex;
     while(currMutex){
         if(currMutex->mutexId==*mutex){
             break;
         }
+        currMutex=currMutex->next;
     }
     if(!currMutex){
         return -1;
@@ -336,8 +350,6 @@ int thread_lock(mythread_mutex_t* mutex){
     while(currMutex->isLocked)
         ;
     currMutex->isLocked=1;
-    headThread->lock=1;
-    setTimer(0,TIMER_TIME);
     return 0;
 }
 
@@ -352,29 +364,26 @@ int thread_unlock(mythread_mutex_t* mutex){
         return -1;
     }
     currMutex->isLocked=0;
-    headThread->lock=0;
     return 0;
 }
 
 int thread_mutex_lock(mythread_mutex_t* mutex){
-    clearTimer();
     mythread_mutex_info* currMutex=headMutex;
     while(currMutex){
         if(currMutex->mutexId==*mutex){
             break;
         }
+        currMutex=currMutex->next;
     }
     if(!currMutex){
         return -1;
     }
 
-    //sleeping for lock
+    //spinning for lock
     while(currMutex->isLocked){
         syscall(SYS_futex,&(currMutex->mutexId),FUTEX_WAIT,currMutex->isLocked,NULL,NULL,0);
     }
     currMutex->isLocked=1;
-    headThread->lock=1;
-    setTimer(0,TIMER_TIME);
     return 0;
 
 }
@@ -392,7 +401,6 @@ int thread_mutex_unlock(mythread_mutex_t* mutex){
 
     syscall(SYS_futex,&(currMutex->mutexId),FUTEX_WAKE,currMutex->isLocked,NULL,NULL,0);
 
-    headThread->lock=0;
     return 0;
 }
 

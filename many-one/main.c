@@ -11,14 +11,14 @@
 
 
 
-int sum=0;
-mythread_mutex_t mutex;
+int sum1=0;
+int sum2=0;
+int sum3=0;
+mythread_mutex_t mutex1,mutex2;
 
 void function1(void){
     for(int i=0;i<1000000;i++){
-        // thread_lock(&mutex);
-        sum++;
-        // thread_unlock(&mutex);
+        sum1++;
     }
     thread_exit("THREAD1 EXITED\n");
 }
@@ -26,39 +26,101 @@ void function1(void){
 
 void function2(void){
     for(int i=0;i<1000000;i++){
-        // thread_lock(&mutex);
-        sum++;
-        // thread_unlock(&mutex);
+        sum1++;
     }
     thread_exit("THREAD2 EXITED\n");
 }
 
-int main(){
-    mythread_t thread1,thread2,thread3,thread4,thread5;
+void function3(void){
+    for(int i=0;i<1000000;i++){
+        thread_lock(&mutex1);
+        sum2++;
+        thread_unlock(&mutex1);
+    }
+    thread_exit("THREAD3 EXITED\n");
+}
 
-    thread_mutex_init(&mutex);
-    printf("%d\n",(int)mutex);
+
+void function4(void){
+    for(int i=0;i<1000000;i++){
+        thread_lock(&mutex1);
+        sum2++;
+        thread_unlock(&mutex1);
+    }
+    thread_exit("THREAD4 EXITED\n");
+}
+
+void function5(void){
+    for(int i=0;i<1000000;i++){
+        thread_mutex_lock(&mutex2);
+        sum3++;
+        thread_mutex_unlock(&mutex2);
+    }
+    thread_exit("THREAD5 EXITED\n");
+}
+
+
+void function6(void){
+    for(int i=0;i<1000000;i++){
+        thread_mutex_lock(&mutex2);
+        sum3++;
+        thread_mutex_unlock(&mutex2);
+    }
+    thread_exit("THREAD6 EXITED\n");
+}
+
+int main(){
+    mythread_t thread1,thread2,thread3,thread4,thread5,thread6;
+
+    thread_mutex_init(&mutex1);
+    thread_mutex_init(&mutex2);
+    printf("%d\n",(int)mutex1);
+    printf("%d\n",(int)mutex2);
     if(thread_create(&thread1,&function1,0)==1){
         return 1;
     }
     if(thread_create(&thread2,&function2,0)==1){
         return 1;
     }
-    printf("%d----%d\n",thread1,thread2);
+
+    if(thread_create(&thread3,&function3,0)==1){
+        return 1;
+    }
+    if(thread_create(&thread4,&function4,0)==1){
+        return 1;
+    }
+    if(thread_create(&thread5,&function5,0)==1){
+        return 1;
+    }
+    if(thread_create(&thread6,&function6,0)==1){
+        return 1;
+    }
+
+    // printf("%d----%d\n",thread1,thread2);
     void* returnValue;
     if(thread_join(&thread1,&returnValue)==-1){
         return 1;
     }
-    printf("%s\n",(char*)returnValue);
+    // printf("%s\n",(char*)returnValue);
+
     if(thread_join(&thread2,&returnValue)==-1){
         return 1;
     }
-
-    if(thread_join(&thread2,&returnValue)==-1){
+    if(thread_join(&thread3,&returnValue)==-1){
+        return 1;
+    }
+    if(thread_join(&thread4,&returnValue)==-1){
+        return 1;
+    }
+    if(thread_join(&thread5,&returnValue)==-1){
+        return 1;
+    }
+    if(thread_join(&thread6,&returnValue)==-1){
         return 1;
     }
     // printf("Thread joined\n");
-
-    printf("%d\n",sum);
+    printf("SUM WITHOUT LOCKING %d\n",sum1);
+    printf("SUM WITH SPIN LOCKING %d\n",sum2);
+    printf("SUM WITH SLEEP LOCKING %d\n",sum3);
     return 0;
 }

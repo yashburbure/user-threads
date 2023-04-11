@@ -5,10 +5,12 @@
 
 #define RUNNABLE 0
 #define TERMINATED 1
+#define ENDED 2
+
 
 #define STACK_SIZE 2*1024*1024
 
-#define TIMER_TIME 1000
+#define TIMER_TIME 100
 
 
 typedef int mythread_t;
@@ -30,7 +32,6 @@ typedef struct thread_info{
     ucontext_t context;
     struct thread_info* prev;
     struct thread_info* next;
-    int lock;
 }thread_info;
 
 
@@ -42,6 +43,7 @@ int thread_lock(mythread_mutex_t*);
 int thread_unlock(mythread_mutex_t*);
 int thread_mutex_lock(mythread_mutex_t*);
 int thread_mutex_unlock(mythread_mutex_t*);
+int thread_mutex_destroy(mythread_mutex_t*);
 
 
 
