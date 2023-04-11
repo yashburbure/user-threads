@@ -102,7 +102,7 @@ void freeThreadDS(){
 
 
 void signalHandler(int signal){
-    printf("Signal Handled\n");
+    printf("Signal Handled %d\n",headThread->threadId);
     thread_info* currThread=headThread;
     headThread=headThread->next;
     swapcontext(&(currThread->context),&(schedulerContext));
@@ -164,7 +164,8 @@ int scheduler(void* arg){
             if(setTimer(0,TIMER_TIME)==-1){
                 perror("Error : ");
             }
-            swapcontext(&schedulerContext,&(headThread->context)); 
+            if(headThread->state==RUNNABLE)
+                swapcontext(&schedulerContext,&(headThread->context)); 
             clearTimer();
         }
     }
@@ -196,18 +197,18 @@ int initThreadDS(){
 
 
 
-int thread_create(mythread_t*,void(*function)(void),void*){
+int thread_create(mythread_t* thread,void(*function)(void),void*){
     if(!initDone){
         if(initThreadDS()==1){
             return 1;
         }
         initDone=1;
     }
-
     thread_info* nn=newThread();
     if(!nn){
         return 1;
     }
+    *thread=nn->threadId;
     makecontext(&nn->context,function,0);
 
     while(linkedListLock)
@@ -225,15 +226,19 @@ int thread_create(mythread_t*,void(*function)(void),void*){
         headThread->prev->next=nn;
         headThread->prev=nn;
     }
-    thread_info* currThread=headThread;
-
     linkedListLock=0;
 
-
     return 0;
-}
+}   
 int thread_join(mythread_t* thread,void** returnValue){
-    
+    thread_info* temp=headThread;
+    do{
+        printf("%d\n",temp->threadId);
+        temp=temp->next;
+    }while(temp!=headThread);
+
+
+    printf("THREADJOIN %d\n",*thread);
 
     while(linkedListLock)
         ;
@@ -243,7 +248,10 @@ int thread_join(mythread_t* thread,void** returnValue){
     thread_info* foundThread=NULL;
     thread_info* currThread=headThread;
 
+    //ERROR HEADTHREAD IS NOT CHANGING
+
     do{
+        printf("%d %d\n",currThread->threadId,*thread);
         if(currThread->threadId==*thread){
             foundThread=currThread;
             break;
@@ -253,10 +261,12 @@ int thread_join(mythread_t* thread,void** returnValue){
 
     linkedListLock=0;
 
+
     if(!foundThread){
         printf("No such Thread\n");
         return 1;
     }
+
     while(foundThread->state!=TERMINATED){
         syscall(SYS_futex,&(foundThread->threadId),FUTEX_WAIT,foundThread->state,NULL,NULL,0);
     }
@@ -267,7 +277,6 @@ int thread_join(mythread_t* thread,void** returnValue){
 
     if(currThread->next==currThread){
         headThread=NULL;
-
     }
     else{
         currThread->prev->next=currThread->next;
@@ -279,6 +288,7 @@ int thread_join(mythread_t* thread,void** returnValue){
     *returnValue=foundThread->returnValue;
 
     linkedListLock=0;
+    printf("hello yash\n");
     return 0;
 }
 
@@ -327,6 +337,7 @@ int thread_lock(mythread_mutex_t* mutex){
         ;
     currMutex->isLocked=1;
     headThread->lock=1;
+    setTimer(0,TIMER_TIME);
     return 0;
 }
 
@@ -342,7 +353,6 @@ int thread_unlock(mythread_mutex_t* mutex){
     }
     currMutex->isLocked=0;
     headThread->lock=0;
-    setTimer(0,TIMER_TIME);
     return 0;
 }
 
@@ -364,6 +374,7 @@ int thread_mutex_lock(mythread_mutex_t* mutex){
     }
     currMutex->isLocked=1;
     headThread->lock=1;
+    setTimer(0,TIMER_TIME);
     return 0;
 
 }
@@ -382,7 +393,6 @@ int thread_mutex_unlock(mythread_mutex_t* mutex){
     syscall(SYS_futex,&(currMutex->mutexId),FUTEX_WAKE,currMutex->isLocked,NULL,NULL,0);
 
     headThread->lock=0;
-    setTimer(0,TIMER_TIME);
     return 0;
 }
 
