@@ -45,6 +45,4 @@ int thread_mutex_lock(mythread_mutex_t*);
 int thread_mutex_unlock(mythread_mutex_t*);
 int thread_mutex_destroy(mythread_mutex_t*);
 
-
-
 #endif

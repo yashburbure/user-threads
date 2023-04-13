@@ -23,8 +23,8 @@ int mainThreadId;
 int threadId[1000];
 int linkedListLock;
 int mutexId;
-mythread_mutex_info* headMutex,*backMutex;
-
+mythread_mutex_info* headMutex=NULL;
+mythread_mutex_info* backMutex=NULL;
 
 ucontext_t schedulerContext;
 
@@ -169,7 +169,6 @@ int scheduler(void* arg){
             clearTimer();
         }
     }
-    printf("Scheduler ended\n");
     freeThreadDS();
     printf("Scheduler ended\n");
     return 0;
@@ -182,8 +181,8 @@ int initThreadDS(){
     mutexId=0;
     mainThreadId=gettid();
     headThread=NULL;
-    headMutex=NULL;
-    backMutex=NULL;
+
+
     void* stack=malloc(STACK_SIZE);
     if(!stack){
         perror("Error : ");
@@ -239,7 +238,6 @@ int thread_join(mythread_t* thread,void** returnValue){
     // }while(temp!=headThread);
 
 
-    printf("THREADJOIN %d\n",*thread);
 
     while(linkedListLock)
         ;
@@ -307,6 +305,7 @@ void thread_mutex_init(mythread_mutex_t* mutex){
         backMutex->next=nn;
         backMutex=nn;
     }
+
 }
 
 int thread_mutex_destroy(mythread_mutex_t* mutex){
@@ -333,8 +332,51 @@ int thread_mutex_destroy(mythread_mutex_t* mutex){
     return 0;
 }
 
+// void print(){
+//     if(headThread){
+//         printf("THREADS :: ");
+//         thread_info* currThread=headThread;
+//         do{
+//             printf("%d:: ",currThread->threadId);
+//             currThread=currThread->next;
+//         }while(currThread!=headThread);
+//         printf("\n");
+//     }
+//     mythread_mutex_info* currMutex=headMutex;
+//     printf("MUTEX :: ");
+//     if(!headMutex){
+//         printf("No mutex\n");
+//     }
+//     while(currMutex){
+//         printf("%d:: ",currMutex->mutexId);
+//         currMutex=currMutex->next;
+//     }
+//     printf("\n");
+// }
 
 int thread_lock(mythread_mutex_t* mutex){
+    mythread_mutex_info* currMutex=headMutex;
+    while(currMutex){
+        // printf("%d :: %d\n",currMutex->mutexId,*mutex);
+        if(currMutex->mutexId==*mutex){
+            break;
+        }
+        currMutex=currMutex->next;
+    }
+    if(!currMutex){
+        printf("No such mutex\n");
+        return -1;
+    }
+    //spinning for lock
+    while(__sync_lock_test_and_set(&currMutex->isLocked,1)!=0){
+        ;
+        // printf("Waiting for lock\n");
+    }
+    // currMutex->isLocked=1;
+    return 0;
+}
+
+int thread_unlock(mythread_mutex_t* mutex){
     mythread_mutex_info* currMutex=headMutex;
     while(currMutex){
         if(currMutex->mutexId==*mutex){
@@ -345,25 +387,8 @@ int thread_lock(mythread_mutex_t* mutex){
     if(!currMutex){
         return -1;
     }
-
-    //spinning for lock
-    while(currMutex->isLocked)
-        ;
-    currMutex->isLocked=1;
-    return 0;
-}
-
-int thread_unlock(mythread_mutex_t* mutex){
-    mythread_mutex_info* currMutex=headMutex;
-    while(currMutex){
-        if(currMutex->mutexId==*mutex){
-            break;
-        }
-    }
-    if(!currMutex){
-        return -1;
-    }
-    currMutex->isLocked=0;
+    __sync_lock_release(&currMutex->isLocked);
+    // currMutex->isLocked=0;
     return 0;
 }
 
@@ -387,12 +412,16 @@ int thread_mutex_lock(mythread_mutex_t* mutex){
     return 0;
 
 }
+
+
 int thread_mutex_unlock(mythread_mutex_t* mutex){
-     mythread_mutex_info* currMutex=headMutex;
+    mythread_mutex_info* currMutex=headMutex;
+    mythread_mutex_info* temp=backMutex;
     while(currMutex){
         if(currMutex->mutexId==*mutex){
             break;
         }
+        currMutex=currMutex->next;
     }
     if(!currMutex){
         return -1;
