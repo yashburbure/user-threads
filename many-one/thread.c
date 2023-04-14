@@ -167,7 +167,7 @@ int thread_create(mythread_t* thread,void(*function)(void),void*){
         thread_info* nn=headThreadGen();
 
         if(!nn){
-            return 1;
+            return -1;
         }
         headThread=nn;
         headThread->next=headThread->prev=headThread;
@@ -177,7 +177,7 @@ int thread_create(mythread_t* thread,void(*function)(void),void*){
         void* stack=malloc(STACK_SIZE);
         if(!stack){
             perror("Error : ");
-            return 1;
+            return -1;
         }
         schedulerContext.uc_stack.ss_sp=stack;
         
@@ -187,7 +187,8 @@ int thread_create(mythread_t* thread,void(*function)(void),void*){
 
     thread_info* nn=newThread();
     if(!nn){
-        return 1;
+        perror("Error : ");
+        return -1;
     }
     *thread=nn->threadId;
     makecontext(&nn->context,function,0);
@@ -222,7 +223,7 @@ int thread_join(mythread_t* thread,void** returnValue){
 
     if(!foundThread){
         fprintf(stderr,"No such Thread\n");
-        return 1;
+        return -1;
     }
     while(foundThread->state!=TERMINATED){
         if(clearTimer()==-1){
@@ -310,6 +311,7 @@ int thread_mutex_destroy(mythread_mutex_t* mutex){
         currMutex=currMutex->next;
     }
     if(!currMutex){
+        fprintf(stderr,"No such Mutex\n");
         return -1;
     }
     if(currMutex==headMutex){
@@ -333,7 +335,7 @@ int thread_lock(mythread_mutex_t* mutex){
         currMutex=currMutex->next;
     }
     if(!currMutex){
-        printf("No such mutex\n");
+        fprintf(stderr,"No such Mutex\n");
         return -1;
     }
     while(__sync_lock_test_and_set(&currMutex->isLocked,1)!=0)
@@ -350,6 +352,7 @@ int thread_unlock(mythread_mutex_t* mutex){
         currMutex=currMutex->next;
     }
     if(!currMutex){
+        fprintf(stderr,"No such Mutex\n");
         return -1;
     }
     __sync_lock_release(&currMutex->isLocked);
@@ -365,6 +368,7 @@ int thread_mutex_lock(mythread_mutex_t* mutex){
         currMutex=currMutex->next;
     }
     if(!currMutex){
+        fprintf(stderr,"No such Mutex\n");
         return -1;
     }
 
@@ -393,6 +397,7 @@ int thread_mutex_unlock(mythread_mutex_t* mutex){
     }
 
     if(!currMutex){
+        fprintf(stderr,"No such Mutex\n");
         return -1;
     }
     
@@ -400,6 +405,116 @@ int thread_mutex_unlock(mythread_mutex_t* mutex){
 
     return 0;
 }
+
+int thread_cancel(mythread_t* thread){
+    while(__sync_lock_test_and_set(&linkedListLock,1))
+        ;
+    thread_info* currThread=headThread;
+    thread_info* foundThread=NULL;
+
+    do{
+        if(currThread->threadId==*thread){
+            foundThread=currThread;
+            break;
+        }
+        currThread=currThread->next;
+    }while(currThread!=headThread);
+
+    __sync_lock_release(&linkedListLock);
+
+    if(!foundThread){
+        fprintf(stderr,"No such Thread ");
+        return -1;
+    }
+    
+    if(foundThread==headThread){
+        foundThread->next->prev=foundThread->prev;
+        foundThread->prev->next=foundThread->next;
+
+        headThread=headThread->next;
+
+        free(foundThread->stack);
+        free(foundThread);
+    }
+    else{
+        foundThread->next->prev=foundThread->prev;
+        foundThread->prev->next=foundThread->next;
+        
+        free(foundThread->stack);
+        free(foundThread);
+    }
+
+    return 0;
+}
+
+int thread_kill(mythread_t* thread,int signal){
+
+    while(__sync_lock_test_and_set(&linkedListLock,1))
+        ;
+    
+    thread_info* currThread=headThread;
+    thread_info* foundThread=NULL;
+
+    do{
+        if(currThread->threadId==*thread){
+            foundThread=currThread;
+            break;
+        }
+        currThread=currThread->next;
+    }while(currThread!=headThread);
+
+    __sync_lock_release(&linkedListLock);
+
+    if(!foundThread){
+        fprintf(stderr,"No such Thread\n");
+    }
+
+    if(signal==SIGTERM || signal==SIGKILL){
+        if(foundThread==headThread){
+            foundThread->next->prev=foundThread->prev;
+            foundThread->prev->next=foundThread->next;
+
+            headThread=headThread->next;
+
+            free(foundThread->stack);
+            free(foundThread);
+        }
+        else{
+            foundThread->next->prev=foundThread->prev;
+            foundThread->prev->next=foundThread->next;
+            
+            free(foundThread->stack);
+            free(foundThread);
+        }
+    }
+    else if(signal==SIGTSTP){
+        if(foundThread->state==RUNNABLE){
+            foundThread->state=STOPPED;
+        }
+        else{
+            if(foundThread->state==TERMINATED){
+                fprintf(stderr,"Thread already terminated\n");
+            }
+            else{
+                fprintf(stderr,"Thread already stopped\n");
+            }
+            return -1;
+        }
+    }
+    else if(signal==SIGCONT){
+        if(foundThread->state==TERMINATED){
+            fprintf(stderr,"Thread already terminated\n");
+            return -1;
+        }
+        foundThread->state=RUNNABLE;
+    }
+    else{
+        fprintf(stderr,"Invalid signal\n");
+        return -1;
+    }
+    return 0;
+}
+
 
 
 

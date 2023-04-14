@@ -5,7 +5,7 @@
 
 #define RUNNABLE 0
 #define TERMINATED 1
-#define ENDED 2
+#define STOPPED 2
 
 
 #define STACK_SIZE 2*1024*1024
@@ -44,5 +44,7 @@ int thread_unlock(mythread_mutex_t*);
 int thread_mutex_lock(mythread_mutex_t*);
 int thread_mutex_unlock(mythread_mutex_t*);
 int thread_mutex_destroy(mythread_mutex_t*);
+int thread_cancel(mythread_t*);
+int thread_kill(mythread_t*,int);
 
 #endif
