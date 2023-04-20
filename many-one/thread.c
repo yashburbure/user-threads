@@ -88,7 +88,6 @@ void freeThreadDS(){
     }
     thread_info* currThread=headThread;
     thread_info* nextThread;
-    int ct=0;
     do{
         nextThread=currThread->next;
         free(currThread->stack);
@@ -160,7 +159,7 @@ thread_info* headThreadGen(){
 
 
 
-int thread_create(mythread_t* thread,void(*function)(void),void*){
+int thread_create(mythread_t* thread,void(*function)(void),void* arg){
     if(!initDone){
         signal(SIGALRM,signalHandler);
         setTimer(0,TIMER_TIME);
@@ -181,7 +180,7 @@ int thread_create(mythread_t* thread,void(*function)(void),void*){
         }
         schedulerContext.uc_stack.ss_sp=stack;
         
-        makecontext(&schedulerContext,&scheduler,0);
+        makecontext(&schedulerContext,&scheduler,1,arg);
         initDone=1;
     }
 
