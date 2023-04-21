@@ -129,9 +129,9 @@ void scheduler(){
             else{
                 swapcontext(&schedulerContext,&(headThread->context)); 
             }
-        }
-        if(clearTimer()==-1){
-            perror("Error : ");
+            if(clearTimer()==-1){
+                perror("Error : ");
+            }
         }
     }
 }
