@@ -6,3 +6,6 @@ thread.o:thread.c
 
 timer.o:timer.c
 	gcc timer.c -c -g
+
+clean:
+	rm *.o
