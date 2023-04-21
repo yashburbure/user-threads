@@ -10,7 +10,7 @@
 
 #define STACK_SIZE 2*1024*1024
 
-#define TIMER_TIME 1000
+#define TIMER_TIME 500
 
 
 typedef int mythread_t;
@@ -35,7 +35,7 @@ typedef struct thread_info{
 }thread_info;
 
 
-int thread_create(mythread_t*,void(*function)(void),void*);
+int thread_create(mythread_t*,void(*function)(void*),void*);
 int thread_join(mythread_t*,void**);
 void thread_exit(void*);
 void thread_mutex_init(mythread_mutex_t*);

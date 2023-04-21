@@ -145,7 +145,6 @@ void signalHandler(int signal){
 thread_info* headThreadGen(){
     thread_info* nn=(thread_info*)malloc(sizeof(thread_info));
     if(!nn){
-        perror("Error : ");
         return NULL;
     }
     getcontext(&nn->context);
@@ -159,7 +158,7 @@ thread_info* headThreadGen(){
 
 
 
-int thread_create(mythread_t* thread,void(*function)(void),void* arg){
+int thread_create(mythread_t* thread,void(*function)(void*),void* arg){
     if(!initDone){
         signal(SIGALRM,signalHandler);
         setTimer(0,TIMER_TIME);
@@ -190,7 +189,7 @@ int thread_create(mythread_t* thread,void(*function)(void),void* arg){
         return -1;
     }
     *thread=nn->threadId;
-    makecontext(&nn->context,function,0);
+    makecontext(&nn->context,(void (*)())function,1,arg);
 
     while(__sync_lock_test_and_set(&linkedListLock,1))
         ;
@@ -233,8 +232,8 @@ int thread_join(mythread_t* thread,void** returnValue){
         swapcontext(&currThread->context,&schedulerContext);
     }
 
-
-    *returnValue=foundThread->returnValue;
+    if(returnValue)
+        *returnValue=foundThread->returnValue;
 
     itimerval timer;
     getitimer(ITIMER_REAL,&timer);

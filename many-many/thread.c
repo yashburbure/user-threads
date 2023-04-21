@@ -19,24 +19,79 @@
 int initdone=0;
 int threadId;
 int mutexId;
+int threadIdlock;
+int mutexIdlock;
+
 thread_info* headThread[KTHREAD];
 mythread_mutex_info* headMutex[KTHREAD];
 mythread_mutex_info* backMutex[KTHREAD];
 ucontext_t schedulerContext[KTHREAD];
-ucontext_t mainContext;
 
-int threadIdlock;
-int mutexIdlock;
-int headThreadLock[KTHREAD];
+int linkedListlock[KTHREAD];
 int headMutexLock[KTHREAD];
 int backMutexLock[KTHREAD];
 
+int threadNumber[KTHREAD];
 
-void scheduler(void* arg){
-
+int kthreadId(int threadid){
+    return (threadid)%3;
 }
 
-void initThreadDS(){
+thread_info* newThread(){
+    thread_info* nn=(thread_info*)malloc(sizeof(thread_info));
+    if(!nn){
+        perror("Error : ");
+        return NULL;
+    }
+
+    if(getcontext(&nn->context)==-1){
+        perror("Error : ");
+        free(nn);
+        return NULL;
+    }
+
+    nn->threadId=threadId++;
+
+    nn->stack=malloc(STACK_SIZE);
+    
+    if(nn->stack==NULL){
+        threadId--;
+        perror("Error : ");
+        free(nn);
+        return NULL;
+    }
+
+    nn->context.uc_stack.ss_size=STACK_SIZE;
+    nn->context.uc_stack.ss_sp=nn->stack;
+    nn->context.uc_link=&schedulerContext[kthreadId(nn->threadId)];
+
+    nn->state=RUNNABLE;
+    nn->next=nn->prev=nn->returnValue=nn->stack=NULL;
+
+    return nn;
+}
+
+
+void signalHandler1(int signal){
+
+}
+void signalHandler2(int signal){
+    
+}
+void signalHandler3(int signal){
+    
+}
+
+int scheduler(void* arg){
+    int kthreadNumber=*(int*)arg;
+    printf("%d\n",kthreadNumber);
+
+
+
+    return 0;
+}
+
+int initThreadDS(){
     threadId=0;
     mutexId=0;
     
@@ -44,22 +99,17 @@ void initThreadDS(){
         headThread[i]=NULL;
         headMutex[i]=NULL;
         backMutex[i]=NULL;
-        if(getcontext(&schedulerContext[i])==-1){
-            perror("Error : ");
-            return -1;
-        }
-        void* stack=malloc(STACK_SIZE);
 
+        threadNumber[i]=i;
+        void* stack=malloc(STACK_SIZE);
         if(!stack){
             perror("Error : ");
             return -1;
         }
-
-        schedulerContext[i].uc_link=NULL;
-        schedulerContext[i].uc_stack.ss_size=STACK_SIZE;
-        schedulerContext[i].uc_stack.ss_sp=stack;
-        
-        makecontext()
+        if(clone(&scheduler,stack+STACK_SIZE,CLONE_VM,(void*)(&threadNumber[i]))==-1){
+            perror("Error : ");
+            return -1;
+        }
     }
 
     return 0;
@@ -72,6 +122,26 @@ int thread_create(mythread_t* thread,void(*function)(void),void* arg){
         }
         initdone=1;
     }
+
+    // thread_info* nn=newThread();
+    // if(!nn){
+    //     return -1;
+    // }
+    
+    // *thread=nn->threadId;
+    // int kid=kthreadId(nn->threadId);
+    // while(__sync_lock_test_and_set(&linkedListlock[kid],1))
+    //     ;
+    
+    // nn->prev=headThread[kid]->prev;
+    // nn->next=headThread;
+    // headThread[kid]->prev->next=nn;
+    // headThread[kid]->prev=nn;
+
+
+    // __sync_lock_release(&linkedListlock[kid]);
+
+    // return 0;
 }
 
 int thread_join(mythread_t* thread,void** returnValue){
