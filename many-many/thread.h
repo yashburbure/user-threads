@@ -8,7 +8,7 @@
 #define STOPPED 2
 
 
-#define STACK_SIZE 2*1024*1024
+#define STACK_SIZE 128*1024
 
 #define TIMER_TIME 500
 #define KTHREAD 3

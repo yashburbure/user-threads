@@ -405,6 +405,13 @@ int thread_mutex_unlock(mythread_mutex_t* mutex){
 }
 
 int thread_cancel(mythread_t* thread){
+    itimerval timer;
+    getitimer(ITIMER_REAL,&timer);
+    if(clearTimer()==-1){
+        fprintf(stderr,"Failed to clear Timer\n");
+        return -1;
+    }
+
     while(__sync_lock_test_and_set(&linkedListLock,1))
         ;
     thread_info* currThread=headThread;
@@ -441,6 +448,8 @@ int thread_cancel(mythread_t* thread){
         free(foundThread->stack);
         free(foundThread);
     }
+
+    setitimer(ITIMER_REAL,&timer,NULL);
 
     return 0;
 }
