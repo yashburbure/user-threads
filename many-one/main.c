@@ -59,7 +59,7 @@ void function4(void *arg){
 }
 
 void function5(void *arg){
-    for(int i=0;i<10000000;i++){
+    for(int i=0;i<100000000;i++){
         thread_mutex_lock(&mutex2);
         sum3++;
         thread_mutex_unlock(&mutex2);
@@ -69,7 +69,7 @@ void function5(void *arg){
 
 
 void function6(void *arg){
-    for(int i=0;i<10000000;i++){
+    for(int i=0;i<100000000;i++){
         thread_mutex_lock(&mutex2);
         sum3++;
         thread_mutex_unlock(&mutex2);
