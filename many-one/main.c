@@ -7,7 +7,8 @@
 #include<fcntl.h>
 #include<string.h>
 #include<stdlib.h>
-#include"thread.h"
+#include <stdbool.h>
+#include "thread.h"
 
 
 
@@ -16,35 +17,30 @@ int sum2=0;
 int sum3=0;
 int ct=0;
 
+int temp = 0;
+
+
 mythread_mutex_t mutex1,mutex2,mutex3;
 
 
-#define LOOPVALUE 100000000
-
-
-void function1(void* arg){
-    for(int i=0;i<LOOPVALUE;i++){
+void function1(void *arg){
+    for(int i=0;i<100000000;i++){
         sum1++;
+        ct++;
     }
     thread_exit("THREAD1 EXITED\n");
 }
 
 
-void function2(void* arg){
-    for(int i=0;i<LOOPVALUE;i++){
+void function2(void *arg){
+    for(int i=0;i<100000000;i++){
         sum1++;
     }
     thread_exit("THREAD2 EXITED\n");
 }
-void function2extended(void* arg){
-    for(int i=0;i<LOOPVALUE;i++){
-        sum1++;
-    }
-    thread_exit("THREADextended EXITED\n");
-}
 
-void function3(void* arg){
-    for(int i=0;i<LOOPVALUE;i++){
+void function3(void *arg){
+    for(int i=0;i<100000000;i++){
         thread_lock(&mutex1);
         sum2++;
         thread_unlock(&mutex1);
@@ -53,8 +49,8 @@ void function3(void* arg){
 }
 
 
-void function4(void* arg){
-    for(int i=0;i<LOOPVALUE;i++){
+void function4(void *arg){
+    for(int i=0;i<100000000;i++){
         thread_lock(&mutex1);
         sum2++;
         thread_unlock(&mutex1);
@@ -62,8 +58,8 @@ void function4(void* arg){
     thread_exit("THREAD4 EXITED\n");
 }
 
-void function5(void* arg){
-    for(int i=0;i<LOOPVALUE;i++){
+void function5(void *arg){
+    for(int i=0;i<10000000;i++){
         thread_mutex_lock(&mutex2);
         sum3++;
         thread_mutex_unlock(&mutex2);
@@ -72,8 +68,8 @@ void function5(void* arg){
 }
 
 
-void function6(void* arg){
-    for(int i=0;i<LOOPVALUE;i++){
+void function6(void *arg){
+    for(int i=0;i<10000000;i++){
         thread_mutex_lock(&mutex2);
         sum3++;
         thread_mutex_unlock(&mutex2);
@@ -81,117 +77,111 @@ void function6(void* arg){
     thread_exit("THREAD6 EXITED\n");
 }
 
-void function7(void* arg){
-    int a=*(int*)arg;
-    printf("%d --------\n",a);
-    thread_exit(0);
+
+
+
+void function7(void *arg){
+    for(int i=0;i<1000000000;i++){
+        if(i % 100000000 == 0){
+            temp++;
+        }
+    }
+    thread_exit("THREAD 7 EXITED\n");
 }
 
 
+int b = 0;
+void function8(void *arg){
+    for(int i=0;i<1000000000;i++){
+        b++;
+    }
+    thread_exit("THREAD 8 EXITED\n");
+}
+
+
+
+
 int main(){
-    mythread_t thread1,thread2,thread3,thread4,thread5,thread6,thread7;
+    mythread_t thread1,thread2,thread3,thread4,thread5,thread6,thread7,thread8;
 
     thread_mutex_init(&mutex1);
 
-    if(thread_create(&thread1,&function1,0)==-1){
-        return 1;
-    }
-    if(thread_create(&thread2,&function2,0)==-1){
-        return 1;
-    }
-
-    // if(thread_create(&thread7,&function2extended,0)==-1){
-    //     return 1;
-    // }
+    thread_create(&thread1,&function1,0);
+    thread_create(&thread2,&function2,0);
+    thread_create(&thread3,&function3,0);
+    thread_create(&thread4,&function4,0);
+    thread_create(&thread5,&function5,0);
+    thread_create(&thread6,&function6,0);
+    thread_create(&thread7,&function7,0);
+    thread_create(&thread8,&function8,0);
 
 
 
+    
+    printf("%d\n",ct);
+    
+    
+    void* returnValue;
 
-    if(thread_create(&thread3,&function3,0)==1){
-        return 1;
-    }
-    if(thread_create(&thread4,&function4,0)==1){
-        return 1;
-    }
-    if(thread_create(&thread5,&function5,0)==1){
-        return 1;
-    }
-    if(thread_create(&thread6,&function6,0)==1){
-        return 1;
-    }
-    if(thread_join(&thread1,NULL)==-1){
-        return 1;
-    }
-    if(thread_join(&thread2,NULL)==-1){
-        return 1;
-    }
-    if(thread_join(&thread3,NULL)==-1){
-        return 1;
-    }
-    if(thread_join(&thread4,NULL)==-1){
-        return 1;
-    }
-    if(thread_join(&thread5,NULL)==-1){
-        return 1;
-    }
-    if(thread_join(&thread6,NULL)==-1){
-        return 1;
+    if(thread_join(&thread1,&returnValue)!=-1){
+        printf("%s\n",(char*)returnValue);
+        free(returnValue);
     }
 
-
-    // thread_kill(&thread1,SIGTSTP);
-    // // printf("%d\n",ct);
-    // // printf("%d----%d\n",thread1,thread2);
+    if(thread_join(&thread2,&returnValue)!=-1){
+        printf("%s\n",(char*)returnValue);
+        free(returnValue);
+    }
+    
+    if(thread_join(&thread3,&returnValue)!=-1){
+        printf("%s\n",(char*)returnValue);
+        free(returnValue);
+    }
    
+
+    thread_kill(&thread7, SIGTSTP);
+    printf("after stopping thread7, temp = %d\n", temp);
     
+    thread_cancel(&thread8);
+
     
-    // void* returnValue;
-    // if(thread_join(&thread1,&returnValue)==-1){
-    //     return 1;
-    // }
-    // printf("%s",(char*)returnValue);
+    if(thread_join(&thread4,&returnValue)!=-1){
+        printf("%s\n",(char*)returnValue);
+        free(returnValue);
+    }
+    
 
-    // free(returnValue);
-    // if(thread_join(&thread2,&returnValue)==-1){
-    //     return 1;
-    // }
-    // printf("%s",(char*)returnValue);
-    // free(returnValue);
-    // // if(thread_join(&thread7,&returnValue)==-1){
-    // //     return 1;
-    // // }
-    // // printf("%s",(char*)returnValue);
-    // // free(returnValue);
 
-    // if(thread_join(&thread3,&returnValue)==-1){
-    //     return 1;
-    // }
-    // printf("%s",(char*)returnValue);
-    // free(returnValue);
-    // if(thread_join(&thread4,&returnValue)==-1){
-    //     return 1;
-    // }
-    // printf("%s\n",(char*)returnValue);
-    // free(returnValue);
-    // if(thread_join(&thread5,&returnValue)==-1){
-    //     return 1;
-    // }
-    // printf("%s\n",(char*)returnValue);
-    // free(returnValue);
-    // if(thread_join(&thread6,&returnValue)==-1){
-    //     return 1;
-    // }
-    // printf("%s\n",(char*)returnValue);
-    // free(returnValue);
+    if(thread_join(&thread5,&returnValue)!=-1){
+        printf("%s\n",(char*)returnValue);
+        free(returnValue);
+    }
+    
 
-    // printf("ct : %d\n",ct);
 
-    // thread_kill(&thread1,SIGCONT);
+    if(thread_join(&thread6,&returnValue)!=-1){
+        printf("%s\n",(char*)returnValue);
+        free(returnValue);
+    }
 
+    if(thread_join(&thread8,&returnValue)!=-1){
+        printf("%s\n",(char*)returnValue);
+        free(returnValue);
+    }
+
+   
+
+    thread_kill(&thread7, SIGCONT);
+    if(thread_join(&thread7,&returnValue)!=-1){
+        printf("%s\n",(char*)returnValue);
+        free(returnValue);
+    }
+    printf("after continuing and finishing thread7, temp = %d\n", temp);
+
+    
 
     printf("SUM WITHOUT LOCKING %d\n",sum1);
     printf("SUM WITH SPIN LOCKING %d\n",sum2);
     printf("SUM WITH SLEEP LOCKING %d\n",sum3);
-
     return 0;
 }

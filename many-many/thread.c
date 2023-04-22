@@ -139,7 +139,7 @@ int scheduler(void* arg){
 
         __sync_lock_release(&linkedListlock[kthreadNumber]);
         if(!nextRunnableThread && mainThreadKilled){
-            printf("thread exited %d\n",kthreadNumber);
+            // printf("thread exited %d\n",kthreadNumber);
             break;
         }
         else if (nextRunnableThread){
@@ -149,7 +149,7 @@ int scheduler(void* arg){
             swapcontext(&schedulerContext[kthreadNumber],&(nextRunnableThread->context));
             clearTimer();
         }
-        else {
+        else{
             mainThreadKilled=kill(mainThreadId,0);  
         }
         while(__sync_lock_test_and_set(&linkedListlock[kthreadNumber],1))
@@ -222,7 +222,7 @@ int initThreadDS(){
             perror("Error : ");
             return -1;
         }
-        if(clone(&scheduler,stack+STACK_SIZE,CLONE_VM,(void*)(&threadNumber[i]))==-1){
+        if(clone(&scheduler,(void*)(stack+STACK_SIZE),CLONE_VM,(void*)(&threadNumber[i]))==-1){
             perror("Error : ");
             return -1;
         }
@@ -401,7 +401,6 @@ int thread_lock(mythread_mutex_t* mutex){
     __sync_lock_release(&headMutexLock);
     while(__sync_lock_test_and_set(&currMutex->isLocked,1)!=0)
         ;
-    // printf("Thread locked\n");
     return 0;
 
 }
@@ -427,6 +426,9 @@ int thread_unlock(mythread_mutex_t* mutex){
     return 0;
 }
 
+int thread_mutex_lock(mythread_mutex_t* mutex){
+    
+}
 
 int thread_mutex_unlock(mythread_mutex_t* mutex){
 
