@@ -24,14 +24,14 @@ int threadIdlock;
 int mutexIdlock;
 
 thread_info* headThread[KTHREAD];
-mythread_mutex_info* headMutex[KTHREAD];
-mythread_mutex_info* backMutex[KTHREAD];
+mythread_mutex_info* headMutex=NULL;
+mythread_mutex_info* backMutex=NULL;
 ucontext_t schedulerContext[KTHREAD];
 
 int schdulerThreadId[KTHREAD];
 
 int linkedListlock[KTHREAD];
-int headMutexLock[KTHREAD];
+int headMutexLock;
 
 int threadNumber[KTHREAD];
 
@@ -139,14 +139,18 @@ int scheduler(void* arg){
 
         __sync_lock_release(&linkedListlock[kthreadNumber]);
         if(!nextRunnableThread && mainThreadKilled){
+            printf("thread exited %d\n",kthreadNumber);
             break;
         }
-        else{
+        else if (nextRunnableThread){
             mainThreadKilled=kill(mainThreadId,0);
             setTimer(0,TIMER_TIME);
             nextRunnableThread->state=RUNNING;
             swapcontext(&schedulerContext[kthreadNumber],&(nextRunnableThread->context));
             clearTimer();
+        }
+        else {
+            mainThreadKilled=kill(mainThreadId,0);  
         }
         while(__sync_lock_test_and_set(&linkedListlock[kthreadNumber],1))
             ;
@@ -210,8 +214,6 @@ int initThreadDS(){
 
     for(int i=0;i<KTHREAD;i++){
         headThread[i]=NULL;
-        headMutex[i]=NULL;
-        backMutex[i]=NULL;
         schdulerThreadId[i]=-2;
 
         threadNumber[i]=i;
@@ -330,22 +332,99 @@ void thread_exit(void* returnValue){
 }
 
 void thread_mutex_init(mythread_mutex_t* mutex){
-    
+    *mutex=mutexId++;
+    mythread_mutex_info* nn=(mythread_mutex_info*)malloc(sizeof(mythread_mutex_info));
+    nn->mutexId=*mutex;
+    nn->next=NULL;
+    nn->isLocked=0;
 
+    while(__sync_lock_test_and_set(&headMutexLock,1))
+        ;
+
+    if(!headMutex){
+        headMutex=nn;
+        backMutex=nn;
+    }
+    else{
+        backMutex->next=nn;
+        backMutex=nn;
+    }
+
+    __sync_lock_release(&headMutexLock);
 }
 
 int thread_mutex_destroy(mythread_mutex_t* mutex){
-
+    mythread_mutex_info* currMutex=headMutex;
+    mythread_mutex_info* prevMutex=NULL;
+    while(__sync_lock_test_and_set(&headMutexLock,1))
+        ;
+    while(currMutex){
+        if(currMutex->mutexId==*mutex){
+            break;
+        }
+        prevMutex=currMutex;
+        currMutex=currMutex->next;
+    }
+    if(!currMutex){
+        fprintf(stderr,"No such Mutex\n");
+        return -1;
+    }
+    if(currMutex==headMutex){
+        headMutex=currMutex->next;
+    }
+    else{
+        prevMutex->next=currMutex->next;
+    }
+    currMutex->next=NULL;
+    free(currMutex);
+    __sync_lock_release(&headMutexLock);
+    return 0;
 
 }
 
 int thread_lock(mythread_mutex_t* mutex){
+    while(__sync_lock_test_and_set(&headMutexLock,1))
+        ;
+
+    mythread_mutex_info* currMutex=headMutex;
+    while(currMutex){
+        if(currMutex->mutexId==*mutex){
+            break;
+        }
+        currMutex=currMutex->next;
+    }
+    if(!currMutex){
+        fprintf(stderr,"No such Mutex\n");
+        return -1;
+    }
+
+    __sync_lock_release(&headMutexLock);
+    while(__sync_lock_test_and_set(&currMutex->isLocked,1)!=0)
+        ;
+    // printf("Thread locked\n");
+    return 0;
 
 }
 
 
 int thread_unlock(mythread_mutex_t* mutex){
-
+    while(__sync_lock_test_and_set(&headMutexLock,1))
+        ;
+    mythread_mutex_info* currMutex=headMutex;
+    while(currMutex){
+        if(currMutex->mutexId==*mutex){
+            break;
+        }
+        currMutex=currMutex->next;
+    }
+    if(!currMutex){
+        fprintf(stderr,"No such Mutex\n");
+        return -1;
+    }
+    __sync_lock_release(&headMutexLock);
+    __sync_lock_release(&currMutex->isLocked);
+    // printf("Thread unlocked\n");
+    return 0;
 }
 
 
