@@ -6,6 +6,8 @@
 #define RUNNABLE 0
 #define TERMINATED 1
 #define STOPPED 2
+#define RUNNING 3
+#define OPERATION 4
 
 
 #define STACK_SIZE 128*1024
