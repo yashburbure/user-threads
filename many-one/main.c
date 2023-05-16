@@ -23,128 +23,26 @@ int temp = 0;
 
 mythread_mutex_t mutex1,mutex2,mutex3;
 
-int lst=10000000;
+typedef struct yash{
+    int a;
+    int b;
+    char ch;
+}yash;
 
-void function1(void *arg){
-    for(int i=0;i<lst;i++){
-        sum1++;
-    }
+void f(void* arg){
+    yash* y=(yash*)arg;
+    printf("Inside thread %d %d %c\n",y->a,y->b,y->ch);
 }
-
-
-void function2(void *arg){
-    for(int i=0;i<lst;i++){
-        sum1++;
-    }
-}
-
-
-void function3(void *arg){
-    for(int i=0;i<lst;i++){
-        thread_lock(&mutex1);
-        sum2++;
-        thread_unlock(&mutex1);
-    }
-}
-
-
-void function4(void *arg){
-    for(int i=0;i<lst;i++){
-        thread_lock(&mutex1);
-        sum2++;
-        thread_unlock(&mutex1);
-    }
-}
-
-void function5(void *arg){
-    for(int i=0;i<lst;i++){
-        thread_mutex_lock(&mutex2);
-        sum3++;
-        thread_mutex_unlock(&mutex2);
-    }
-}
-
-
-void function6(void *arg){
-    for(int i=0;i<lst;i++){
-        thread_mutex_lock(&mutex2);
-        sum3++;
-        thread_mutex_unlock(&mutex2);
-    }
-}
-
-
-
-
-
-
 int main(){
-    mythread_t thread1,thread2,thread3,thread4,thread5,thread6;
-
-    thread_mutex_init(&mutex1);
-    thread_mutex_init(&mutex2);
-
-    thread_create(&thread1,&function1,0);
-    thread_create(&thread2,&function2,0);
-    thread_create(&thread3,&function3,0);
-    thread_create(&thread4,&function4,0);
-    thread_create(&thread5,&function5,0);
-    thread_create(&thread6,&function6,0);
 
 
-
-    
-    
-    
-    void* returnValue;
-
-    if(thread_join(&thread1,&returnValue)!=-1){
-        if(returnValue)
-            printf("%s\n",(char*)returnValue);
-        free(returnValue);
+    yash y;
+    y.a=y.b=10;
+    y.ch='y';
+    mythread_t thread1;
+    if(thread_create(&thread1,&f,(void*)(&y))==-1){
+        return 1;
     }
-
-    if(thread_join(&thread2,&returnValue)!=-1){
-        if(returnValue)
-            printf("%s\n",(char*)returnValue);
-        free(returnValue);
-    }
-    
-    if(thread_join(&thread3,&returnValue)!=-1){
-        if(returnValue)
-            printf("%s\n",(char*)returnValue);
-        free(returnValue);
-    }
-   
-
-    
-    if(thread_join(&thread4,&returnValue)!=-1){
-        if(returnValue)
-            printf("%s\n",(char*)returnValue);
-        free(returnValue);
-    }
-    
-
-
-    if(thread_join(&thread5,&returnValue)!=-1){
-        if(returnValue)
-            printf("%s\n",(char*)returnValue);
-        free(returnValue);
-    }
-    
-
-
-    if(thread_join(&thread6,&returnValue)!=-1){
-        if(returnValue)
-            printf("%s\n",(char*)returnValue);
-        free(returnValue);
-    }
-
-
-    
-
-    printf("SUM WITHOUT LOCKING %d\n",sum1);
-    printf("SUM WITH SPIN LOCKING %d\n",sum2);
-    printf("SUM WITH SLEEP LOCKING %d\n",sum3);
+    thread_join(&thread1,0);
     return 0;
 }

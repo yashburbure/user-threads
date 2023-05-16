@@ -156,8 +156,8 @@ int scheduler(void* arg){
         }
         __sync_lock_release(&linkedListlock[kthreadNumber]);
     }
-    freeThreadDS(kthreadNumber);
     printf("Scheduler ended %d\n",kthreadNumber);
+    freeThreadDS(kthreadNumber);
     return 0;
 }
 

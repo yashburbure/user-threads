@@ -29,7 +29,7 @@ int listlock=0;
 ucontext_t schedulerContext;
 
 
-thread_info* newThread(){
+thread_info* newThread(void* arg){
     thread_info* nn=(thread_info*)malloc(sizeof(thread_info));
     if(!nn){
         perror("Error : ");
@@ -41,6 +41,15 @@ thread_info* newThread(){
         free(nn);
         return NULL;
     }
+    nn->parameter=malloc(sizeof(arg));
+    if(!nn->parameter){
+        perror("Error : ");
+        free(nn);
+        return NULL;
+    }
+    int sz=sizeof(arg);
+    memcpy(nn->parameter,arg,sz);
+
     while(__sync_lock_test_and_set(&threadIdlock,1))
         ;
 
@@ -124,6 +133,7 @@ thread_info* headThreadGen(){
     getcontext(&nn->context);
     nn->stack=NULL;
     nn->next=nn->prev=nn->returnValue=NULL;
+    nn->parameter=NULL;
     nn->state=RUNNABLE;
     while(__sync_lock_test_and_set(&threadIdlock,1))
         ;
@@ -160,16 +170,17 @@ int thread_create(mythread_t* thread,void(*function)(void*),void* arg){
         }
         schedulerContext.uc_stack.ss_sp=stack;
         
-        makecontext(&schedulerContext,&scheduler,1,arg);
+        makecontext(&schedulerContext,&scheduler,1,nn->parameter);
         initDone=1;
     }
 
-    thread_info* nn=newThread();
+    thread_info* nn=newThread(arg);
     if(!nn){
         perror("Error : ");
         return -1;
     }
     *thread=nn->threadId;
+    
     makecontext(&nn->context,(void (*)())function,1,arg);
 
     while(__sync_lock_test_and_set(&listlock,1))
@@ -230,6 +241,7 @@ int thread_join(mythread_t* thread,void** returnValue){
         headThread=headThread->next;
 
         free(foundThread->stack);
+        free(foundThread->parameter);
         free(foundThread);
     }
     else{
@@ -237,6 +249,7 @@ int thread_join(mythread_t* thread,void** returnValue){
         foundThread->prev->next=foundThread->next;
         
         free(foundThread->stack);
+        free(foundThread->parameter);
         free(foundThread);
     }
     setitimer(ITIMER_REAL,&timer,NULL);

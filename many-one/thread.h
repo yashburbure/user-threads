@@ -21,6 +21,7 @@ typedef struct thread_info{
     int threadId;
     void* stack;
     void* returnValue;
+    void* parameter;
     int state;
     ucontext_t context;
     struct thread_info* prev;
