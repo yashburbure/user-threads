@@ -29,7 +29,6 @@ void function1(void *arg){
     for(int i=0;i<lst;i++){
         sum1++;
     }
-    thread_exit("THREAD1 EXITED\n");
 }
 
 
@@ -37,7 +36,6 @@ void function2(void *arg){
     for(int i=0;i<lst;i++){
         sum1++;
     }
-    thread_exit("THREAD2 EXITED\n");
 }
 
 
@@ -47,7 +45,6 @@ void function3(void *arg){
         sum2++;
         thread_unlock(&mutex1);
     }
-    thread_exit("THREAD3 EXITED\n");
 }
 
 
@@ -57,7 +54,6 @@ void function4(void *arg){
         sum2++;
         thread_unlock(&mutex1);
     }
-    thread_exit("THREAD4 EXITED\n");
 }
 
 void function5(void *arg){
@@ -66,7 +62,6 @@ void function5(void *arg){
         sum3++;
         thread_mutex_unlock(&mutex2);
     }
-    thread_exit("THREAD5 EXITED\n");
 }
 
 
@@ -76,7 +71,6 @@ void function6(void *arg){
         sum3++;
         thread_mutex_unlock(&mutex2);
     }
-    thread_exit("THREAD6 EXITED\n");
 }
 
 
@@ -105,38 +99,44 @@ int main(){
     void* returnValue;
 
     if(thread_join(&thread1,&returnValue)!=-1){
-        printf("%s\n",(char*)returnValue);
+        if(returnValue)
+            printf("%s\n",(char*)returnValue);
         free(returnValue);
     }
 
     if(thread_join(&thread2,&returnValue)!=-1){
-        printf("%s\n",(char*)returnValue);
+        if(returnValue)
+            printf("%s\n",(char*)returnValue);
         free(returnValue);
     }
     
     if(thread_join(&thread3,&returnValue)!=-1){
-        printf("%s\n",(char*)returnValue);
+        if(returnValue)
+            printf("%s\n",(char*)returnValue);
         free(returnValue);
     }
    
 
     
     if(thread_join(&thread4,&returnValue)!=-1){
-        printf("%s\n",(char*)returnValue);
+        if(returnValue)
+            printf("%s\n",(char*)returnValue);
         free(returnValue);
     }
     
 
 
     if(thread_join(&thread5,&returnValue)!=-1){
-        printf("%s\n",(char*)returnValue);
+        if(returnValue)
+            printf("%s\n",(char*)returnValue);
         free(returnValue);
     }
     
 
 
     if(thread_join(&thread6,&returnValue)!=-1){
-        printf("%s\n",(char*)returnValue);
+        if(returnValue)
+            printf("%s\n",(char*)returnValue);
         free(returnValue);
     }
 

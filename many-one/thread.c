@@ -97,6 +97,11 @@ void scheduler(){
             else{
                 swapcontext(&schedulerContext,&(headThread->context)); 
             }
+            itimerval timer;
+            getitimer(ITIMER_REAL,&timer);
+            if(timer.it_value.tv_usec>0){
+                headThread->state=TERMINATED;
+            }
             if(clearTimer()==-1){
                 perror("Error : ");
             }
@@ -136,6 +141,7 @@ thread_info* headThreadGen(){
 int thread_create(mythread_t* thread,void(*function)(void*),void* arg){
     if(!initDone){
         signal(SIGALRM,signalHandler);
+        
         setTimer(0,TIMER_TIME);
         thread_info* nn=headThreadGen();
 
@@ -398,10 +404,6 @@ int thread_kill(mythread_t* thread,int signal){
     }
     return 0;
 }
-
-
-
-
 
 
 #endif
