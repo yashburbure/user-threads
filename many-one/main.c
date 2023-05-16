@@ -15,32 +15,34 @@
 int sum1=0;
 int sum2=0;
 int sum3=0;
-int ct=0;
+int ct1,ct2;
+
 
 int temp = 0;
 
 
 mythread_mutex_t mutex1,mutex2,mutex3;
 
+int lst=10000000;
 
 void function1(void *arg){
-    for(int i=0;i<100000000;i++){
+    for(int i=0;i<lst;i++){
         sum1++;
-        ct++;
     }
     thread_exit("THREAD1 EXITED\n");
 }
 
 
 void function2(void *arg){
-    for(int i=0;i<100000000;i++){
+    for(int i=0;i<lst;i++){
         sum1++;
     }
     thread_exit("THREAD2 EXITED\n");
 }
 
+
 void function3(void *arg){
-    for(int i=0;i<100000000;i++){
+    for(int i=0;i<lst;i++){
         thread_lock(&mutex1);
         sum2++;
         thread_unlock(&mutex1);
@@ -50,7 +52,7 @@ void function3(void *arg){
 
 
 void function4(void *arg){
-    for(int i=0;i<100000000;i++){
+    for(int i=0;i<lst;i++){
         thread_lock(&mutex1);
         sum2++;
         thread_unlock(&mutex1);
@@ -59,7 +61,7 @@ void function4(void *arg){
 }
 
 void function5(void *arg){
-    for(int i=0;i<100000000;i++){
+    for(int i=0;i<lst;i++){
         thread_mutex_lock(&mutex2);
         sum3++;
         thread_mutex_unlock(&mutex2);
@@ -69,7 +71,7 @@ void function5(void *arg){
 
 
 void function6(void *arg){
-    for(int i=0;i<100000000;i++){
+    for(int i=0;i<lst;i++){
         thread_mutex_lock(&mutex2);
         sum3++;
         thread_mutex_unlock(&mutex2);
@@ -80,31 +82,13 @@ void function6(void *arg){
 
 
 
-void function7(void *arg){
-    for(int i=0;i<1000000000;i++){
-        if(i % 100000000 == 0){
-            temp++;
-        }
-    }
-    thread_exit("THREAD 7 EXITED\n");
-}
-
-
-int b = 0;
-void function8(void *arg){
-    for(int i=0;i<1000000000;i++){
-        b++;
-    }
-    thread_exit("THREAD 8 EXITED\n");
-}
-
-
 
 
 int main(){
-    mythread_t thread1,thread2,thread3,thread4,thread5,thread6,thread7,thread8;
+    mythread_t thread1,thread2,thread3,thread4,thread5,thread6;
 
     thread_mutex_init(&mutex1);
+    thread_mutex_init(&mutex2);
 
     thread_create(&thread1,&function1,0);
     thread_create(&thread2,&function2,0);
@@ -112,13 +96,10 @@ int main(){
     thread_create(&thread4,&function4,0);
     thread_create(&thread5,&function5,0);
     thread_create(&thread6,&function6,0);
-    thread_create(&thread7,&function7,0);
-    thread_create(&thread8,&function8,0);
 
 
 
     
-    printf("%d\n",ct);
     
     
     void* returnValue;
@@ -138,11 +119,6 @@ int main(){
         free(returnValue);
     }
    
-
-    thread_kill(&thread7, SIGTSTP);
-    printf("after stopping thread7, temp = %d\n", temp);
-    
-    thread_cancel(&thread8);
 
     
     if(thread_join(&thread4,&returnValue)!=-1){
@@ -164,19 +140,6 @@ int main(){
         free(returnValue);
     }
 
-    if(thread_join(&thread8,&returnValue)!=-1){
-        printf("%s\n",(char*)returnValue);
-        free(returnValue);
-    }
-
-   
-
-    thread_kill(&thread7, SIGCONT);
-    if(thread_join(&thread7,&returnValue)!=-1){
-        printf("%s\n",(char*)returnValue);
-        free(returnValue);
-    }
-    printf("after continuing and finishing thread7, temp = %d\n", temp);
 
     
 

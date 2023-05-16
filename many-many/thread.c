@@ -92,22 +92,17 @@ thread_info* newThread(){
 
 
 void signalHandler(int signal){
-    // printf("Signal received for thread %d\n",gettid());
     for(int i=0;i<KTHREAD;i++){
         if(schdulerThreadId[i]==(int)gettid()){
             swapcontext(&(headThread[i]->context),&(schedulerContext[i]));
         }
     }
 }
-// void usersignal(int signal){
-//     printf("Signal received SIGUSR 1%d\n",gettid());
-// }
+
 
 
 int scheduler(void* arg){
-    // printf("In thread Number %d\n",(int)gettid());
     int kthreadNumber=*(int*)arg;
-    // printf("In thread Number %d----2\n",kthreadNumber);
 
     schdulerThreadId[kthreadNumber]=gettid();
     signal(SIGALRM,signalHandler);
@@ -139,10 +134,9 @@ int scheduler(void* arg){
 
         __sync_lock_release(&linkedListlock[kthreadNumber]);
         if(!nextRunnableThread && mainThreadKilled){
-            // printf("thread exited %d\n",kthreadNumber);
             break;
         }
-        else if (nextRunnableThread){
+        else if(nextRunnableThread){
             mainThreadKilled=kill(mainThreadId,0);
             setTimer(0,TIMER_TIME);
             nextRunnableThread->state=RUNNING;
@@ -152,53 +146,13 @@ int scheduler(void* arg){
         else{
             mainThreadKilled=kill(mainThreadId,0);  
         }
+        clearTimer();
         while(__sync_lock_test_and_set(&linkedListlock[kthreadNumber],1))
             ;
 
         headThread[kthreadNumber]=nextRunnableThread->next;
         if(nextRunnableThread->state==RUNNING){
             nextRunnableThread->state=RUNNABLE;
-        }
-        else{
-            // printf("Removing thread\n");
-            thread_info* foundThread=nextRunnableThread;
-            int kid=kthreadNumber;
-            if(foundThread->next==foundThread){
-                free(foundThread->stack);
-                free(foundThread);
-
-                headThread[kid]=NULL;
-            }
-            else if(foundThread==headThread[kid]){
-                foundThread->next->prev=foundThread->prev;
-                foundThread->prev->next=foundThread->next;
-
-                headThread[kid]=headThread[kid]->next;
-                
-                free(foundThread->stack);
-                free(foundThread);
-            }
-            else{
-                foundThread->next->prev=foundThread->prev;
-                foundThread->prev->next=foundThread->next;
-
-                free(foundThread->stack);
-                free(foundThread);
-            }
-            // printf("Thread removed\n");
-            
-            // thread_info* currThread=headThread[kid];
-            // if(currThread){
-            //     do{
-            //         printf("%d :: ",currThread->threadId);
-            //         currThread=currThread->next;
-            //     }while(currThread!=headThread[kid]);
-            //     printf("\n");
-            // }
-            // else{
-            //     printf("No thread\n");
-            // }
-
         }
         __sync_lock_release(&linkedListlock[kthreadNumber]);
     }

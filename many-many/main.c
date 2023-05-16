@@ -21,50 +21,56 @@ mythread_mutex_t mutex1,mutex2,mutex3;
 
 #define LOOPVALUE 1000000
 
-
-void function1(void* arg){
-    printf("in function1\n");
-    for(int i=0;i<LOOPVALUE;i++){
-        sum1++;
+void f(void* arg){
+    int threadNumber=*(int*)arg;
+    for(int i=0;i<10;i++){
+        printf("THREAD NUMBER : %d :: %d\n",i);
     }
-    thread_exit("THREAD1 EXITED\n");
 }
 
-
-void function2(void* arg){
-    printf("in function2\n");
-    for(int i=0;i<LOOPVALUE;i++){
-        sum1++;
-    }
-    thread_exit("THREAD2 EXITED\n");
-}
-void function2extended(void* arg){
-    for(int i=0;i<LOOPVALUE;i++){
-        sum1++;
-    }
-    thread_exit("THREADextended EXITED\n");
-}
-
-void function3(void* arg){
-    printf("in function3\n");
-    for(int i=0;i<LOOPVALUE;i++){
-        thread_lock(&mutex1);
-        sum2++;
-        thread_unlock(&mutex1);
-    }
-    thread_exit("THREAD3 EXITED\n");
-}
+// void function1(void* arg){
+//     printf("in function1\n");
+//     for(int i=0;i<LOOPVALUE;i++){
+//         sum1++;
+//     }
+//     thread_exit("THREAD1 EXITED\n");
+// }
 
 
-void function4(void* arg){
-    printf("in function4\n");
-    for(int i=0;i<LOOPVALUE;i++){
-        thread_lock(&mutex1);
-        sum2++;
-        thread_unlock(&mutex1);
-    }
-    thread_exit("THREAD4 EXITED\n");
-}
+// void function2(void* arg){
+//     printf("in function2\n");
+//     for(int i=0;i<LOOPVALUE;i++){
+//         sum1++;
+//     }
+//     thread_exit("THREAD2 EXITED\n");
+// }
+// void function2extended(void* arg){
+//     for(int i=0;i<LOOPVALUE;i++){
+//         sum1++;
+//     }
+//     thread_exit("THREADextended EXITED\n");
+// }
+
+// void function3(void* arg){
+//     printf("in function3\n");
+//     for(int i=0;i<LOOPVALUE;i++){
+//         thread_lock(&mutex1);
+//         sum2++;
+//         thread_unlock(&mutex1);
+//     }
+//     thread_exit("THREAD3 EXITED\n");
+// }
+
+
+// void function4(void* arg){
+//     printf("in function4\n");
+//     for(int i=0;i<LOOPVALUE;i++){
+//         thread_lock(&mutex1);
+//         sum2++;
+//         thread_unlock(&mutex1);
+//     }
+//     thread_exit("THREAD4 EXITED\n");
+// }
 
 // void function5(void* arg){
 //     for(int i=0;i<LOOPVALUE;i++){
@@ -94,15 +100,18 @@ void function4(void* arg){
 
 int main(){
     mythread_t thread1,thread2,thread3,thread4,thread5,thread6,thread7;
+    
+    if(thread_create(&thread1,&f,))
 
-    thread_mutex_init(&mutex1);
 
-    if(thread_create(&thread1,&function1,0)==-1){
-        return 1;
-    }
-    if(thread_create(&thread2,&function2,0)==-1){
-        return 1;
-    }
+    // thread_mutex_init(&mutex1);
+
+    // if(thread_create(&thread1,&function1,0)==-1){
+    //     return 1;
+    // }
+    // if(thread_create(&thread2,&function2,0)==-1){
+    //     return 1;
+    // }
 
     // if(thread_create(&thread7,&function2extended,0)==-1){
     //     return 1;
@@ -123,22 +132,22 @@ int main(){
     // if(thread_create(&thread6,&function6,0)==1){
     //     return 1;
     // }
-    if(thread_join(&thread1,NULL)==-1){
-        return 1;
-    }
-    printf("Thread 1 joined\n");
-    if(thread_join(&thread2,NULL)==-1){
-        return 1;
-    }
-    printf("Thread 2 joined\n");
-    if(thread_join(&thread3,NULL)==-1){
-        return 1;
-    }
-    printf("Thread 3 joined\n");
-    if(thread_join(&thread4,NULL)==-1){
-        return 1;
-    }
-    printf("Thread 4 joined\n");
+    // if(thread_join(&thread1,NULL)==-1){
+    //     return 1;
+    // }
+    // printf("Thread 1 joined\n");
+    // if(thread_join(&thread2,NULL)==-1){
+    //     return 1;
+    // }
+    // printf("Thread 2 joined\n");
+    // if(thread_join(&thread3,NULL)==-1){
+    //     return 1;
+    // }
+    // printf("Thread 3 joined\n");
+    // if(thread_join(&thread4,NULL)==-1){
+    //     return 1;
+    // }
+    // printf("Thread 4 joined\n");
     // if(thread_join(&thread5,NULL)==-1){
     //     return 1;
     // }
