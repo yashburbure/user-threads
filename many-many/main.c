@@ -18,14 +18,28 @@ int ct=0;
 
 
 
-#define LOOPVALUE 1000000
+#define LOOPVALUE 1000
 
-void function(void* arg){
-    printf("Inside ")
+void f(void* arg){
+    int temp=*(int*)arg;
+    for(int i=0;i<LOOPVALUE;i++){
+        printf("inside thread ----- %d --- %d\n",temp,i);
+    }
+    thread_exit("Exited\n");
 }
 
+int temp[6];
 int main(){
-    mythread_t thread1,thread2,thread3;
-    if(thread_create())
+    mythread_t thread[6];
+    for(int i=0;i<5;i++){
+        temp[i]=i;
+        printf("%d\n",temp[i]);
+        if(thread_create(&thread[i],f,(void*)(&temp[i]))==-1){
+            return 1;
+        }
+        // void* ptr;
+        thread_join(&thread[i],NULL);
+        // printf("%s\n",(char*)ptr);
+    }
     return 0;
 }

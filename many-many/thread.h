@@ -10,9 +10,9 @@
 #define OPERATION 4
 
 
-#define STACK_SIZE 1024*1024
+#define STACK_SIZE 2*1024*1024
 
-#define TIMER_TIME 500
+#define TIMER_TIME 100
 #define KTHREAD 3
 
 
@@ -21,16 +21,16 @@ typedef int mythread_t;
 typedef int mythread_mutex_t;
 
 typedef struct mythread_mutex_info{
-    int mutexId;
-    int isLocked;
+    int mutex_id;
+    int is_locked;
     struct mythread_mutex_info* next;
 }mythread_mutex_info;
 
 
 typedef struct thread_info{
-    int threadId;
+    int thread_id;
     void* stack;
-    void* returnValue;
+    void* return_value;
     int state;
     ucontext_t context;
     struct thread_info* prev;

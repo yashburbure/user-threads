@@ -20,7 +20,7 @@
 #ifndef THREAD_C
 #define THREAD_C
 
-int initDone=0;
+int initDone;
 thread_info* headThread=NULL;
 int threadId=0;
 int threadIdlock=0;
@@ -41,14 +41,6 @@ thread_info* newThread(void* arg){
         free(nn);
         return NULL;
     }
-    nn->parameter=malloc(sizeof(arg));
-    if(!nn->parameter){
-        perror("Error : ");
-        free(nn);
-        return NULL;
-    }
-    int sz=sizeof(arg);
-    memcpy(nn->parameter,arg,sz);
 
     while(__sync_lock_test_and_set(&threadIdlock,1))
         ;
@@ -110,6 +102,7 @@ void scheduler(){
             getitimer(ITIMER_REAL,&timer);
             if(timer.it_value.tv_usec>0){
                 headThread->state=TERMINATED;
+                headThread=headThread->next;
             }
             if(clearTimer()==-1){
                 perror("Error : ");
@@ -133,7 +126,6 @@ thread_info* headThreadGen(){
     getcontext(&nn->context);
     nn->stack=NULL;
     nn->next=nn->prev=nn->returnValue=NULL;
-    nn->parameter=NULL;
     nn->state=RUNNABLE;
     while(__sync_lock_test_and_set(&threadIdlock,1))
         ;
@@ -170,7 +162,7 @@ int thread_create(mythread_t* thread,void(*function)(void*),void* arg){
         }
         schedulerContext.uc_stack.ss_sp=stack;
         
-        makecontext(&schedulerContext,&scheduler,1,nn->parameter);
+        makecontext(&schedulerContext,&scheduler,1,arg);
         initDone=1;
     }
 
@@ -225,9 +217,9 @@ int thread_join(mythread_t* thread,void** returnValue){
         swapcontext(&currThread->context,&schedulerContext);
     }
 
-    if(returnValue)
+    if(returnValue){
         *returnValue=foundThread->returnValue;
-
+    }
     itimerval timer;
     getitimer(ITIMER_REAL,&timer);
     if(clearTimer()==-1){
@@ -241,7 +233,6 @@ int thread_join(mythread_t* thread,void** returnValue){
         headThread=headThread->next;
 
         free(foundThread->stack);
-        free(foundThread->parameter);
         free(foundThread);
     }
     else{
@@ -249,7 +240,6 @@ int thread_join(mythread_t* thread,void** returnValue){
         foundThread->prev->next=foundThread->next;
         
         free(foundThread->stack);
-        free(foundThread->parameter);
         free(foundThread);
     }
     setitimer(ITIMER_REAL,&timer,NULL);
@@ -273,7 +263,9 @@ void thread_exit(void* returnValue){
     if(setTimer(0,TIMER_TIME)==-1){
         fprintf(stderr,"Failed to set Timer\n");
     }
-    swapcontext(&(headThread->context),&(schedulerContext));
+    thread_info* currThread=headThread;
+    headThread=headThread->next;
+    swapcontext(&(currThread->context),&(schedulerContext));
 }
 
 int thread_mutex_init(mythread_mutex_t* mutex){

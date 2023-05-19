@@ -43,6 +43,7 @@ int main(){
     if(thread_create(&thread1,&f,(void*)(&y))==-1){
         return 1;
     }
-    thread_join(&thread1,0);
+    
+    thread_join(&thread1,NULL);
     return 0;
 }
