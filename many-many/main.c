@@ -9,37 +9,39 @@
 #include<stdlib.h>
 #include"thread.h"
 
+#define LOOPVALUE 1000000
+#define THREAD_NUMBER 6
+int ct[THREAD_NUMBER];
 
-
-int sum1=0;
-int sum2=0;
-int sum3=0;
-int ct=0;
-
-
-
-#define LOOPVALUE 1000
 
 void f(void* arg){
     int temp=*(int*)arg;
     for(int i=0;i<LOOPVALUE;i++){
-        printf("inside thread ----- %d --- %d\n",temp,i);
+        ct[temp]++;
+        // printf("inside thread -----%d --- %d\n",temp,i);
     }
-    thread_exit("Exited\n");
+    printf("%d==\n",ct[temp]);
+    thread_exit(0);
 }
 
-int temp[6];
+int temp[THREAD_NUMBER];
 int main(){
-    mythread_t thread[6];
-    for(int i=0;i<5;i++){
+    mythread_t thread[THREAD_NUMBER];
+    for(int i=0;i<THREAD_NUMBER;i++){
         temp[i]=i;
-        printf("%d\n",temp[i]);
+        // printf("%d\n",temp[i]);
         if(thread_create(&thread[i],f,(void*)(&temp[i]))==-1){
             return 1;
         }
-        // void* ptr;
-        thread_join(&thread[i],NULL);
-        // printf("%s\n",(char*)ptr);
+        int a=0;
+        for(int j=0;j<1000000;j++){
+            a++;
+        }
+        printf("%d\n",a);
+        thread_kill(&thread[i],SIGKILL);
+    }
+    for(int i=0;i<THREAD_NUMBER;i++){
+        printf("%d\n",ct[i]);
     }
     return 0;
 }

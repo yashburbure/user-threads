@@ -190,7 +190,10 @@ int thread_create(mythread_t* thread,void(*function)(void*),void* arg){
 }
 
 int thread_join(mythread_t* thread,void** returnValue){
-
+    if(!headThread){
+        fprintf(stderr,"No such thread\n");
+        return -1;
+    }
     thread_info* foundThread=NULL;
     thread_info* currThread=headThread;
 
@@ -343,7 +346,10 @@ int thread_cancel(mythread_t* thread){
 }
 
 int thread_kill(mythread_t* thread,int signal){
-
+    if(!headThread){
+        fprintf(stderr,"No such thread\n");
+        return -1;
+    }
     while(__sync_lock_test_and_set(&listlock,1))
         ;
     

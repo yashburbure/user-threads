@@ -12,6 +12,7 @@
 #include<sys/wait.h>
 #include"thread.h"
 #include"timer.h"
+#include"thread_signal.h"
 
 #ifndef THREAD_C
 #define THREAD_C
@@ -41,13 +42,56 @@ void free_thread_ds(int kthread){
     do{
         next_thread=curr_thread->next;
         free(curr_thread->stack);
-        free(curr_thread->return_value);
         free(curr_thread);
         curr_thread=next_thread;
     }while(curr_thread!=head_thread[kthread]);
 
 }
 
+void free_thread(thread_info* found_thread,int kid){
+    if(found_thread->next==found_thread){
+        head_thread[kid]=NULL;
+    }
+    else if(found_thread==head_thread[kid]){
+        found_thread->next->prev=found_thread->prev;
+        found_thread->prev->next=found_thread->next;
+
+        head_thread[kid]=head_thread[kid]->next;
+
+        free(found_thread->stack);
+        free(found_thread);
+    }
+    else{
+        found_thread->next->prev=found_thread->prev;
+        found_thread->prev->next=found_thread->next;
+
+        free(found_thread->stack);
+        free(found_thread);
+    }
+}
+
+void clean_up(int kid){
+    if(!head_thread[kid]){
+        return ;
+    }
+    while(__sync_lock_test_and_set(&listlock[kid],1))
+        ;
+
+    thread_info* curr_thread=head_thread[kid];
+    do{
+        if(curr_thread->state==TERMINATED || curr_thread->state==CANCELLED){
+            free_thread(curr_thread,kid);
+            curr_thread=head_thread[kid];
+        }
+        if(!curr_thread){
+            __sync_lock_release(&listlock[kid]);
+            return ;
+        }
+        curr_thread=curr_thread->next;
+    }while(curr_thread!=head_thread[kid]);
+
+    __sync_lock_release(&listlock[kid]);
+}
 
 thread_info* new_thread(void* arg){
     thread_info* nn=(thread_info*)malloc(sizeof(thread_info));
@@ -87,7 +131,7 @@ thread_info* new_thread(void* arg){
 
 
 void signalHandler(int signal){
-    printf("TIMER CALLED\n");
+    // printf("TIMER CALLED\n");
     for(int i=0;i<KTHREAD;i++){
         if(schduler_thread_id[i]==(int)gettid()){
             swapcontext(&(head_thread[i]->context),&(scheduler_context[i]));
@@ -97,23 +141,23 @@ void signalHandler(int signal){
 
 
 int scheduler(void* arg){
-    int kthread_number=*(int*)arg;
+    int kid=*(int*)arg;
     signal(SIGALRM,signalHandler);
 
-    if(getcontext(&scheduler_context[kthread_number])==-1){
+    if(getcontext(&scheduler_context[kid])==-1){
         perror("Error : ");
         return -1;
     }
-    scheduler_context[kthread_number].uc_link=NULL;
-    // printf("Scheduler started %d\n",kthread_number);
+    scheduler_context[kid].uc_link=NULL;
+    // printf("Scheduler started %d\n",kid);
     int main_thread_killed=(kill(main_thread_id,0));
-    while(!main_thread_killed || head_thread[kthread_number]){
+    while(!main_thread_killed || head_thread[kid]){
         thread_info* next_runnable_thread=NULL;
 
-        while(__sync_lock_test_and_set(&listlock[kthread_number],1))
+        while(__sync_lock_test_and_set(&listlock[kid],1))
             ;
-        if(head_thread[kthread_number]){
-            thread_info* curr_thread=head_thread[kthread_number];
+        if(head_thread[kid]){
+            thread_info* curr_thread=head_thread[kid];
 
             do{
                 if(curr_thread->state==RUNNABLE){
@@ -121,42 +165,46 @@ int scheduler(void* arg){
                     break;
                 }
                 curr_thread=curr_thread->next;
-            }while(curr_thread!=head_thread[kthread_number]);
+            }while(curr_thread!=head_thread[kid]);
         }
 
-        __sync_lock_release(&listlock[kthread_number]);
+        __sync_lock_release(&listlock[kid]);
 
         if(!next_runnable_thread && main_thread_killed){
             break;
         }
         else if(next_runnable_thread){
-            // printf("KTHREAD %d FOUND RUNNABLE THREAD\n",kthread_number);
+            // printf("KTHREAD %d FOUND RUNNABLE THREAD\n",kid);
             setTimer(0,TIMER_TIME);
-            head_thread[kthread_number]=next_runnable_thread;
+            head_thread[kid]=next_runnable_thread;
             next_runnable_thread->state=RUNNING;
-            swapcontext(&scheduler_context[kthread_number],&(next_runnable_thread->context));
+            swapcontext(&scheduler_context[kid],&(next_runnable_thread->context));
             
             itimerval timer;
             getitimer(ITIMER_REAL,&timer);
-            if(next_runnable_thread->state!=OPERATION && timer.it_value.tv_usec>0){
+            if(next_runnable_thread->state!=CANCELLED && timer.it_value.tv_usec>0){
                 next_runnable_thread->state=TERMINATED;
             }
         }
         
         if(next_runnable_thread){
-            while(__sync_lock_test_and_set(&listlock[kthread_number],1))
+            while(__sync_lock_test_and_set(&listlock[kid],1))
                 ;
-            head_thread[kthread_number]=next_runnable_thread->next;
+            head_thread[kid]=next_runnable_thread->next;
             if(next_runnable_thread->state==RUNNING){
                 next_runnable_thread->state=RUNNABLE;
             }
 
-            __sync_lock_release(&listlock[kthread_number]);
+            __sync_lock_release(&listlock[kid]);
         }
+        
+        handle_signals(kid);
+        clean_up(kid);
+
         main_thread_killed=(kill(main_thread_id,0));
     }
-    // printf("Scheduler ended %d\n",kthread_number);
-    free_thread_ds(kthread_number);
+    // printf("Scheduler ended %d\n",kid);
+    free_thread_ds(kid);
     return 0;
 }
 
@@ -202,7 +250,8 @@ int thread_create(mythread_t* thread,void(*function)(void*),void* arg){
     int kid=kthread_id(nn->thread_id);
     while(__sync_lock_test_and_set(&listlock[kid],1))
         ;
-    
+    // printf("Lock acquired by schduler\n");
+
     if(!head_thread[kid]){
         nn->prev=nn->next=nn;
         head_thread[kid]=nn;
@@ -215,7 +264,7 @@ int thread_create(mythread_t* thread,void(*function)(void*),void* arg){
     }
 
     __sync_lock_release(&listlock[kid]);
-    printf("%d THREAD CREATION DONE\n",*thread);
+    // printf("%d THREAD CREATION DONE\n",*thread);
     return 0;
 }
 
@@ -225,7 +274,6 @@ int thread_join(mythread_t* thread,void** return_value){
 
     while(__sync_lock_test_and_set(&listlock[kid],1))
         ;
-
     thread_info* curr_thread=head_thread[kid];
     thread_info* found_thread=NULL;
 
@@ -243,6 +291,7 @@ int thread_join(mythread_t* thread,void** return_value){
         fprintf(stderr,"Thread not found\n");
         return -1;
     }
+
     int ct=0;
     while(found_thread->state!=TERMINATED)
         ;
@@ -251,34 +300,11 @@ int thread_join(mythread_t* thread,void** return_value){
         *return_value=found_thread->return_value;
     }
 
-    while(__sync_lock_test_and_set(&listlock[kid],1))
-        ;
-    if(found_thread->next==found_thread){
-        head_thread[kid]=NULL;
-    }
-    else if(found_thread==head_thread[kid]){
-        found_thread->next->prev=found_thread->prev;
-        found_thread->prev->next=found_thread->next;
-
-        head_thread[kid]=head_thread[kid]->next;
-
-        free(found_thread->stack);
-        free(found_thread);
-    }
-    else{
-        found_thread->next->prev=found_thread->prev;
-        found_thread->prev->next=found_thread->next;
-
-        free(found_thread->stack);
-        free(found_thread);
-    }
-
-    __sync_lock_release(&listlock[kid]);
     return 0;
 }
 
 void thread_exit(void* return_value){
-    printf("THREAD EXIT\n");
+    // printf("THREAD EXIT\n");
     if(clearTimer()==-1){
         fprintf(stderr,"Failed to clear Timer\n");
     }
@@ -292,9 +318,64 @@ void thread_exit(void* return_value){
 }
 
 int thread_cancel(mythread_t* thread){
+    int kid=kthread_id(*thread);
+    if(!head_thread[kid]){
+        fprintf(stderr,"No such thread\n");
+        return -1;
+    }
+    while(__sync_lock_test_and_set(&listlock[kid],1))
+        ;
+    // printf("Lock acquired by THREAD CANCEL\n");
+    
+    thread_info* curr_thread=head_thread[kid];
+    thread_info* found_thread=NULL;
+    do{
+        if(curr_thread->thread_id==*thread){
+            found_thread=curr_thread;
+            break;
+        }
+        curr_thread=curr_thread->next;
+    }while(curr_thread!=head_thread[kid]);
+    
+    __sync_lock_release(&listlock[kid]);
+
+    // printf("Lock released by THREAD CANCEL\n");
+
+    if(!found_thread){
+        fprintf(stderr,"No such thread\n");
+        return -1;
+    }
+
+    if(found_thread->state==RUNNING){
+        found_thread->state=CANCELLED;
+        if(tgkill(schduler_thread_id[kid],schduler_thread_id[kid],SIGALRM)==-1){
+            perror("Error : ");
+            return -1;
+        }
+    }
+    else{
+        found_thread->state=CANCELLED;
+    }
+    return 0;
 }
-int thread_kill(mythread_t* thread,int signal){
+void thread_kill(mythread_t* thread,int signal){
+    insert_signal(*thread,signal);
+}
+
+void thread_mutex_init(mythread_mutex_t* thread){
 
 }
+int thread_mutex_destroy(mythread_mutex_t* thread){
+    
+}
+int thread_lock(mythread_mutex_t*){
+
+}
+int thread_unlock(mythread_mutex_t*){
+
+}
+int thread_mutex_lock(mythread_mutex_t*);
+int thread_mutex_unlock(mythread_mutex_t*);
+
 
 #endif
