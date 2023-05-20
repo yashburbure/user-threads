@@ -76,7 +76,7 @@ void handle_signals(int kid){
             
             if(found_thread){
                 if(signal==SIGTERM || signal==SIGKILL){
-                    free_thread(found_thread,kid);
+                    found_thread->state=KILLED;
                 }
                 else if(signal==SIGTSTP){
                     found_thread->state=TERMINATED;

@@ -13,6 +13,10 @@
 #include"thread.h"
 #include"timer.h"
 #include"thread_signal.h"
+#include"mutexlock.h"
+#include"mutexlock.h"
+#include"spinlock.h"
+#include"sleeplock.h"
 
 #ifndef THREAD_C
 #define THREAD_C
@@ -26,7 +30,7 @@ int listlock[KTHREAD];
 
 ucontext_t scheduler_context[KTHREAD];
 
-int schduler_thread_id[KTHREAD];
+int scheduler_thread_id[KTHREAD];
 int thread_number[KTHREAD];
 
 int kthread_id(int threadid){
@@ -79,7 +83,8 @@ void clean_up(int kid){
 
     thread_info* curr_thread=head_thread[kid];
     do{
-        if(curr_thread->state==TERMINATED || curr_thread->state==CANCELLED){
+        if(curr_thread->state==JOINED || curr_thread->state==CANCELLED || curr_thread->state==KILLED){
+            // printf("Joined cancelled killed thread found\n");
             free_thread(curr_thread,kid);
             curr_thread=head_thread[kid];
         }
@@ -133,7 +138,7 @@ thread_info* new_thread(void* arg){
 void signalHandler(int signal){
     // printf("TIMER CALLED\n");
     for(int i=0;i<KTHREAD;i++){
-        if(schduler_thread_id[i]==(int)gettid()){
+        if(scheduler_thread_id[i]==(int)gettid()){
             swapcontext(&(head_thread[i]->context),&(scheduler_context[i]));
         }
     }
@@ -149,6 +154,8 @@ int scheduler(void* arg){
         return -1;
     }
     scheduler_context[kid].uc_link=NULL;
+    scheduler_context[kid].uc_stack.ss_sp=NULL;
+
     // printf("Scheduler started %d\n",kid);
     int main_thread_killed=(kill(main_thread_id,0));
     while(!main_thread_killed || head_thread[kid]){
@@ -181,9 +188,12 @@ int scheduler(void* arg){
             swapcontext(&scheduler_context[kid],&(next_runnable_thread->context));
             
             itimerval timer;
-            getitimer(ITIMER_REAL,&timer);
-            if(next_runnable_thread->state!=CANCELLED && timer.it_value.tv_usec>0){
-                next_runnable_thread->state=TERMINATED;
+            if(getitimer(ITIMER_REAL,&timer)==-1){
+                perror("Error : ");
+            }
+
+            if(head_thread[kid]->state!=CANCELLED && timer.it_value.tv_usec>0){
+                head_thread[kid]->state=TERMINATED;
             }
         }
         
@@ -220,8 +230,8 @@ int initThreadDS(){
             perror("Error : ");
             return -1;
         }
-        schduler_thread_id[i]=clone(&scheduler,(void*)(stack+STACK_SIZE),CLONE_VM|CLONE_FILES,(void*)(&thread_number[i]));
-        if(schduler_thread_id[i]==-1){
+        scheduler_thread_id[i]=clone(&scheduler,(void*)(stack+STACK_SIZE),CLONE_VM|CLONE_FILES,(void*)(&thread_number[i]));
+        if(scheduler_thread_id[i]==-1){
             perror("Error : ");
             return -1;
         }
@@ -292,10 +302,11 @@ int thread_join(mythread_t* thread,void** return_value){
         return -1;
     }
 
-    int ct=0;
-    while(found_thread->state!=TERMINATED)
-        ;
+    while(found_thread->state!=TERMINATED){
+        // printf("STATE %d\n",found_thread->state);
+    }
 
+    found_thread->state=JOINED;
     if(return_value){
         *return_value=found_thread->return_value;
     }
@@ -309,7 +320,7 @@ void thread_exit(void* return_value){
         fprintf(stderr,"Failed to clear Timer\n");
     }
     for(int i=0;i<KTHREAD;i++){
-        if(schduler_thread_id[i]==gettid()){
+        if(scheduler_thread_id[i]==gettid()){
             head_thread[i]->state=TERMINATED;
             head_thread[i]->return_value=return_value;
             swapcontext(&(head_thread[i]->context),&scheduler_context[i]);
@@ -348,7 +359,7 @@ int thread_cancel(mythread_t* thread){
 
     if(found_thread->state==RUNNING){
         found_thread->state=CANCELLED;
-        if(tgkill(schduler_thread_id[kid],schduler_thread_id[kid],SIGALRM)==-1){
+        if(tgkill(scheduler_thread_id[kid],scheduler_thread_id[kid],SIGALRM)==-1){
             perror("Error : ");
             return -1;
         }
@@ -362,20 +373,24 @@ void thread_kill(mythread_t* thread,int signal){
     insert_signal(*thread,signal);
 }
 
-void thread_mutex_init(mythread_mutex_t* thread){
-
+int thread_mutex_init(mythread_mutex_t* thread){
+    return mutex_init_wrapper((int*)thread);
 }
 int thread_mutex_destroy(mythread_mutex_t* thread){
-    
+    return mutex_destroy_wrapper((int*)thread);
 }
-int thread_lock(mythread_mutex_t*){
-
+int thread_lock(mythread_mutex_t* thread){
+    return acquire_spinlock((int*)thread);
 }
-int thread_unlock(mythread_mutex_t*){
-
+int thread_unlock(mythread_mutex_t* thread){
+    return release_spinlock((int*)thread);
 }
-int thread_mutex_lock(mythread_mutex_t*);
-int thread_mutex_unlock(mythread_mutex_t*);
+int thread_mutex_lock(mythread_mutex_t* thread){
+    return acquire_sleeplock((int*)thread);
+}
+int thread_mutex_unlock(mythread_mutex_t* thread){
+    return release_sleeplock((int*)thread);
+}
 
 
 #endif

@@ -1,13 +1,17 @@
-main:main.o thread.o timer.o thread_signal.o
-	gcc main.o thread.o timer.o thread_signal.o -o main -g
+ORGS=\
+	main.c\
+	thread.c\
+	timer.c\
+	thread_signal.c\
+	mutexlock.c\
+	spinlock.c\
+	sleeplock.c\
 
-thread.o:thread.c
-	gcc thread.c -c -g
+FLAGS=\
+	-g\
 
-timer.o:timer.c
-	gcc timer.c -c -g
+main:${ORGS}
+	gcc ${ORGS} ${FLAGS} -o main
 
-thread_signal.o:thread_signal.c
-	gcc thread_signal.c -c -g
 clean:
 	rm *.o

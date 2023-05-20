@@ -7,7 +7,7 @@ OBJS=\
 	sleeplock.c\
 
 FLAGS=\
-	-Wall -g\
+	-g\
 
 main:${OBJS}
 	gcc ${OBJS} ${FLAGS} -o main 
